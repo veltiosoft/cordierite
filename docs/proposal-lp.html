@@ -1,0 +1,588 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cordierite 提案ページ</title>
+  <style>
+    :root {
+      color-scheme: light dark;
+      --bg: #f6f4ef;
+      --surface: #fffaf1;
+      --text: #1f2933;
+      --muted: #5f6b7a;
+      --line: #ded6c8;
+      --accent: #6f4dff;
+      --accent-strong: #4b32c3;
+      --accent-soft: #ebe6ff;
+      --ok: #13795b;
+      --shadow: 0 24px 80px rgba(31, 41, 51, 0.12);
+    }
+
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #111318;
+        --surface: #191d24;
+        --text: #f4f0e8;
+        --muted: #b3bbc7;
+        --line: #2d3440;
+        --accent: #a896ff;
+        --accent-strong: #c5bbff;
+        --accent-soft: #27233f;
+        --ok: #5ee0ad;
+        --shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+      }
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      background:
+        radial-gradient(circle at top left, rgba(111, 77, 255, 0.16), transparent 34rem),
+        radial-gradient(circle at top right, rgba(19, 121, 91, 0.10), transparent 28rem),
+        var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", "Helvetica Neue", sans-serif;
+      line-height: 1.75;
+    }
+
+    a {
+      color: inherit;
+    }
+
+    .page {
+      width: min(1120px, calc(100% - 32px));
+      margin: 0 auto;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 28px 0;
+    }
+
+    .brand {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+    }
+
+    .brand-mark {
+      display: grid;
+      width: 34px;
+      height: 34px;
+      place-items: center;
+      border-radius: 12px;
+      background: var(--accent);
+      color: white;
+      font-size: 18px;
+    }
+
+    nav {
+      display: flex;
+      gap: 18px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    nav a {
+      text-decoration: none;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1.05fr) minmax(320px, 0.95fr);
+      gap: 36px;
+      align-items: center;
+      padding: 64px 0 72px;
+    }
+
+    .eyebrow {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      margin: 0 0 18px;
+      padding: 6px 12px;
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      background: rgba(255, 255, 255, 0.45);
+      color: var(--muted);
+      font-size: 13px;
+    }
+
+    h1 {
+      max-width: 760px;
+      margin: 0;
+      font-size: clamp(40px, 7vw, 76px);
+      line-height: 1.08;
+      letter-spacing: -0.055em;
+    }
+
+    .lead {
+      max-width: 700px;
+      margin: 24px 0 0;
+      color: var(--muted);
+      font-size: clamp(18px, 2.4vw, 22px);
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 14px;
+      margin-top: 34px;
+    }
+
+    .button {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 48px;
+      padding: 0 20px;
+      border-radius: 14px;
+      font-weight: 700;
+      text-decoration: none;
+    }
+
+    .button.primary {
+      background: var(--accent);
+      color: white;
+      box-shadow: 0 14px 36px rgba(111, 77, 255, 0.28);
+    }
+
+    .button.secondary {
+      border: 1px solid var(--line);
+      background: rgba(255, 255, 255, 0.28);
+      color: var(--text);
+    }
+
+    .mock {
+      border: 1px solid var(--line);
+      border-radius: 30px;
+      background: var(--surface);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    .mock-top {
+      display: flex;
+      gap: 8px;
+      padding: 18px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      background: #ff6b6b;
+    }
+
+    .dot:nth-child(2) {
+      background: #ffd166;
+    }
+
+    .dot:nth-child(3) {
+      background: #51cf66;
+    }
+
+    .mock-body {
+      padding: 26px;
+    }
+
+    .status-card {
+      padding: 22px;
+      border-radius: 22px;
+      background: var(--accent-soft);
+    }
+
+    .status-card strong {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--accent-strong);
+      font-size: 14px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+
+    .status-card p {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 700;
+      line-height: 1.45;
+    }
+
+    .pipeline {
+      display: grid;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .pipeline span {
+      display: block;
+      padding: 12px 14px;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    section {
+      padding: 36px 0;
+    }
+
+    .section-head {
+      max-width: 760px;
+      margin-bottom: 24px;
+    }
+
+    h2 {
+      margin: 0;
+      font-size: clamp(28px, 4vw, 44px);
+      line-height: 1.18;
+      letter-spacing: -0.035em;
+    }
+
+    .section-head p {
+      margin: 14px 0 0;
+      color: var(--muted);
+      font-size: 17px;
+    }
+
+    .cards {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .card {
+      min-height: 220px;
+      padding: 24px;
+      border: 1px solid var(--line);
+      border-radius: 24px;
+      background: rgba(255, 255, 255, 0.36);
+    }
+
+    .card h3 {
+      margin: 0 0 10px;
+      font-size: 20px;
+    }
+
+    .card p {
+      margin: 0;
+      color: var(--muted);
+    }
+
+    .plan {
+      display: grid;
+      grid-template-columns: repeat(6, minmax(0, 1fr));
+      gap: 12px;
+      counter-reset: step;
+    }
+
+    .step {
+      position: relative;
+      padding: 18px;
+      border: 1px solid var(--line);
+      border-radius: 20px;
+      background: var(--surface);
+    }
+
+    .step::before {
+      counter-increment: step;
+      content: counter(step);
+      display: grid;
+      width: 28px;
+      height: 28px;
+      margin-bottom: 18px;
+      place-items: center;
+      border-radius: 999px;
+      background: var(--accent);
+      color: white;
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .step strong {
+      display: block;
+      margin-bottom: 8px;
+    }
+
+    .step span {
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .compare {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 18px;
+    }
+
+    .compare-box {
+      padding: 26px;
+      border-radius: 26px;
+      background: var(--surface);
+      border: 1px solid var(--line);
+    }
+
+    .compare-box h3 {
+      margin: 0 0 16px;
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 1.2em;
+      color: var(--muted);
+    }
+
+    li + li {
+      margin-top: 8px;
+    }
+
+    .cta {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 24px;
+      align-items: center;
+      margin: 42px 0 72px;
+      padding: 32px;
+      border-radius: 30px;
+      background: var(--text);
+      color: var(--bg);
+    }
+
+    .cta h2 {
+      color: inherit;
+    }
+
+    .cta p {
+      margin: 12px 0 0;
+      color: color-mix(in srgb, var(--bg) 78%, transparent);
+    }
+
+    .cta .button {
+      background: var(--bg);
+      color: var(--text);
+    }
+
+    footer {
+      padding: 28px 0 42px;
+      border-top: 1px solid var(--line);
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    @media (max-width: 900px) {
+      .hero,
+      .compare,
+      .cta {
+        grid-template-columns: 1fr;
+      }
+
+      .cards {
+        grid-template-columns: 1fr;
+      }
+
+      .plan {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 620px) {
+      header {
+        align-items: flex-start;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      nav {
+        flex-wrap: wrap;
+      }
+
+      .hero {
+        padding-top: 36px;
+      }
+
+      .plan {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <a class="brand" href="#">
+        <span class="brand-mark">C</span>
+        <span>Cordierite</span>
+      </a>
+      <nav aria-label="ページ内ナビゲーション">
+        <a href="#proposal">提案</a>
+        <a href="#design">設計</a>
+        <a href="#roadmap">進め方</a>
+        <a href="macos-app-spec.md">仕様書</a>
+      </nav>
+    </header>
+
+    <main>
+      <section class="hero" id="proposal">
+        <div>
+          <p class="eyebrow">macOS 26+ native dictation proposal</p>
+          <h1>まず Apple Speech で速く作り、必要なら Whisper で精度を伸ばす。</h1>
+          <p class="lead">
+            macOS 向けの Swift 製メニューバー音声入力アプリです。
+            初期版は `SpeechAnalyzer` だけで動かし、認識エンジンの境界を残して Whisper を後から追加できる仕様にします。
+          </p>
+          <div class="actions">
+            <a class="button primary" href="macos-app-spec.md">仕様書を読む</a>
+            <a class="button secondary" href="#roadmap">実装計画を見る</a>
+          </div>
+        </div>
+
+        <div class="mock" aria-label="アプリの動作イメージ">
+          <div class="mock-top">
+            <span class="dot"></span>
+            <span class="dot"></span>
+            <span class="dot"></span>
+          </div>
+          <div class="mock-body">
+            <div class="status-card">
+              <strong>Ready</strong>
+              <p>Right Option を押して話す。離すと、前面のアプリにテキストが入る。</p>
+            </div>
+            <div class="pipeline">
+              <span>Hotkey</span>
+              <span>AVAudioEngine</span>
+              <span>SpeechAnalyzer</span>
+              <span>Pasteboard + Command V</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="design">
+        <div class="section-head">
+          <h2>初期版は軽く、拡張点は先に決める。</h2>
+          <p>
+            Swift ネイティブ化の利点を得るには、最初から巨大な推論基盤を抱えないほうがよいです。
+            ただし、音声入力アプリの価値は精度で決まるため、Whisper を後から足せる境界は仕様に含めます。
+          </p>
+        </div>
+
+        <div class="cards">
+          <article class="card">
+            <h3>SpeechAnalyzer 先行</h3>
+            <p>
+              macOS 26 以上のオンデバイス音声認識を使います。
+              モデル配布を OS に任せ、常駐メモリと初期セットアップを抑えます。
+            </p>
+          </article>
+          <article class="card">
+            <h3>Whisper 後付け</h3>
+            <p>
+              認識エンジンを抽象化して、後から `mlx-whisper` や Swift 直結実装を追加できます。
+              最初は高精度モードとして扱います。
+            </p>
+          </article>
+          <article class="card">
+            <h3>ローカル完結</h3>
+            <p>
+              音声と文字起こし結果を保存しません。
+              設定だけを `Application Support` に保存し、プライバシーを製品仕様として固定します。
+            </p>
+          </article>
+        </div>
+      </section>
+
+      <section>
+        <div class="section-head">
+          <h2>SpeechAnalyzer と Whisper の役割を分ける。</h2>
+          <p>
+            既定は Apple Speech にします。
+            Whisper は固有名詞、技術用語、英日混在で必要になったときに追加します。
+          </p>
+        </div>
+
+        <div class="compare">
+          <div class="compare-box">
+            <h3>Apple Speech を既定にする理由</h3>
+            <ul>
+              <li>Swift アプリに自然に組み込める。</li>
+              <li>モデルをアプリに同梱しなくてよい。</li>
+              <li>ライブ結果を出しやすく、体感遅延を下げやすい。</li>
+              <li>配布と初回セットアップが軽い。</li>
+            </ul>
+          </div>
+          <div class="compare-box">
+            <h3>Whisper を残す理由</h3>
+            <ul>
+              <li>精度を自前で検証し、必要なら認識品質を上げられる。</li>
+              <li>言語自動判定やモデル選択の自由度が高い。</li>
+              <li>`mlx-whisper` をヘルパープロセスとして段階的に追加できる。</li>
+              <li>Apple Speech が苦手な音声に対応する余地がある。</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="roadmap">
+        <div class="section-head">
+          <h2>六つの段階で実装する。</h2>
+          <p>
+            先に常駐アプリとして成立させ、その後に認識品質を測ります。
+            Whisper の採用判断は実測後に行います。
+          </p>
+        </div>
+
+        <div class="plan">
+          <div class="step">
+            <strong>App Shell</strong>
+            <span>メニューバー、設定、権限案内を作る。</span>
+          </div>
+          <div class="step">
+            <strong>Recording</strong>
+            <span>ホットキー、録音、無音判定を作る。</span>
+          </div>
+          <div class="step">
+            <strong>Apple Speech</strong>
+            <span>`SpeechAnalyzerEngine` で文字起こしする。</span>
+          </div>
+          <div class="step">
+            <strong>Paste</strong>
+            <span>カーソル位置へ貼り付け、クリップボードを復元する。</span>
+          </div>
+          <div class="step">
+            <strong>Measure</strong>
+            <span>日本語と英語で精度、遅延、失敗率を測る。</span>
+          </div>
+          <div class="step">
+            <strong>Whisper</strong>
+            <span>必要な場合だけ高精度モードとして追加する。</span>
+          </div>
+        </div>
+      </section>
+
+      <section class="cta">
+        <div>
+          <h2>提案仕様をたたき台として採用する。</h2>
+          <p>
+            仕様書には MVP、権限、音声認識パイプライン、Whisper 拡張、テスト計画をまとめています。
+            まずはこの仕様でプロトタイプに進めます。
+          </p>
+        </div>
+        <a class="button" href="macos-app-spec.md">Markdown 仕様書を開く</a>
+      </section>
+    </main>
+
+    <footer>
+      <span>Cordierite. Built for local-first dictation on macOS.</span>
+    </footer>
+  </div>
+</body>
+</html>
