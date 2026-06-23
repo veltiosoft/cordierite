@@ -31,7 +31,7 @@ final class AppModel {
         if whisperModelIsDownloaded {
             return "\(model.shortLabel) is downloaded but not loaded."
         }
-        return "\(model.shortLabel) is not downloaded."
+        return "\(model.shortLabel) is not downloaded. Use Manage Models to download it."
     }
 
     var canStartRecognition: Bool {
@@ -41,8 +41,8 @@ final class AppModel {
         return true
     }
 
-    var recognitionSelectionMenuTitle: String {
-        "Recognition: \(recognitionSelectionLabel(for: currentRecognitionSelection))"
+    var recognitionMenuTitle: String {
+        "Recognition: \(recognitionOptionLabel(for: currentRecognitionSelection))"
     }
 
     var currentRecognitionSelection: RecognitionSelection {
@@ -65,21 +65,28 @@ final class AppModel {
         return labels.joined(separator: ", ")
     }
 
-    func recognitionSelectionLabel(for selection: RecognitionSelection) -> String {
+    func recognitionOptionLabel(for selection: RecognitionSelection) -> String {
         switch selection {
         case .appleSpeech:
             "Apple Speech"
         case .whisper(let model):
-            whisperRecognitionSelectionLabel(for: model)
+            whisperRecognitionOptionLabel(for: model)
         }
     }
 
-    func whisperRecognitionSelectionLabel(for model: WhisperModelOption) -> String {
+    func whisperRecognitionOptionLabel(for model: WhisperModelOption) -> String {
         var label = "Whisper · \(model.menuLabel)"
-        if downloadedWhisperModels.contains(model) {
-            label += " · Downloaded"
+        if !isWhisperModelDownloaded(model) {
+            label += " · Not downloaded"
         }
         return label
+    }
+
+    func whisperModelManageLabel(for model: WhisperModelOption) -> String {
+        if isWhisperModelDownloaded(model) {
+            return "\(model.menuLabel) · Downloaded"
+        }
+        return model.menuLabel
     }
 
     func isRecognitionSelectionActive(_ selection: RecognitionSelection) -> Bool {
@@ -105,9 +112,7 @@ final class AppModel {
             let previousModel = selectedWhisperModel
 
             if wasWhisper && previousModel == model {
-                if !whisperModelIsReady {
-                    await requestWhisperModelDownload()
-                }
+                await applyWhisperModelConfiguration()
                 return
             }
 
@@ -131,6 +136,7 @@ final class AppModel {
     private let recordingController: RecordingController
     private let pasteController = PasteController()
     private var stopRecordingAfterStart = false
+    private var isStartingRecording = false
 
     init() {
         let engine = SpeechEngineFactory.makeEngine(
@@ -238,8 +244,6 @@ final class AppModel {
                 loadingStatusMessage = nil
             }
             try? await whisperEngine.prepare(language: configStore.configuration.language)
-        } else {
-            await requestWhisperModelDownload()
         }
 
         await refreshWhisperModelStatus()
@@ -248,35 +252,50 @@ final class AppModel {
         }
     }
 
-    func requestWhisperModelDownload() async {
-        guard configStore.configuration.recognitionEngine == .whisper,
-              let whisperEngine = speechEngine as? WhisperEngine else {
-            return
-        }
-
-        let model = selectedWhisperModel
+    func downloadWhisperModel(_ model: WhisperModelOption) async {
         guard WhisperModelDownloadPrompt.confirmDownload(for: model) else {
             return
         }
 
         whisperDownloadErrorMessage = nil
         state = .loading
-        loadingStatusMessage = whisperEngine.loadingStatusMessage
+        loadingStatusMessage = "Downloading \(model.shortLabel)…"
 
-        let progressTask = Task {
-            while !Task.isCancelled {
-                assetDownloadFraction = whisperEngine.downloadProgress?.fractionCompleted
-                try? await Task.sleep(for: .milliseconds(100))
+        let progressTask: Task<Void, Never>?
+        if configStore.configuration.recognitionEngine == .whisper,
+           selectedWhisperModel == model,
+           let whisperEngine = speechEngine as? WhisperEngine {
+            progressTask = Task {
+                while !Task.isCancelled {
+                    assetDownloadFraction = whisperEngine.downloadProgress?.fractionCompleted
+                    try? await Task.sleep(for: .milliseconds(100))
+                }
             }
+        } else {
+            progressTask = nil
         }
         defer {
-            progressTask.cancel()
+            progressTask?.cancel()
             assetDownloadFraction = nil
             loadingStatusMessage = nil
         }
 
         do {
-            try await whisperEngine.downloadSelectedModel()
+            if configStore.configuration.recognitionEngine == .whisper,
+               selectedWhisperModel == model,
+               let whisperEngine = speechEngine as? WhisperEngine {
+                try await whisperEngine.downloadSelectedModel()
+            } else {
+                _ = try await WhisperModelStore.shared.download(modelID: model.rawValue)
+                if configStore.configuration.recognitionEngine == .whisper,
+                   selectedWhisperModel == model {
+                    await applyWhisperModelConfiguration()
+                    whisperDownloadErrorMessage = nil
+                    refreshPermissionState()
+                    reloadHotkeyMonitor()
+                    return
+                }
+            }
             whisperDownloadErrorMessage = nil
         } catch {
             whisperDownloadErrorMessage = error.localizedDescription
@@ -288,12 +307,42 @@ final class AppModel {
         reloadHotkeyMonitor()
     }
 
+    func deleteWhisperModel(_ model: WhisperModelOption) async {
+        guard isWhisperModelDownloaded(model) else {
+            return
+        }
+
+        guard WhisperModelDeletePrompt.confirmDelete(for: model) else {
+            return
+        }
+
+        whisperDownloadErrorMessage = nil
+
+        do {
+            try await WhisperModelStore.shared.delete(modelID: model.rawValue)
+
+            if configStore.configuration.recognitionEngine == .whisper,
+               selectedWhisperModel == model,
+               let whisperEngine = speechEngine as? WhisperEngine {
+                whisperEngine.unloadLoadedModel()
+            }
+        } catch {
+            whisperDownloadErrorMessage = error.localizedDescription
+            NSLog("Whisper model delete failed: \(error.localizedDescription)")
+        }
+
+        await refreshWhisperModelStatus()
+        if state != .recording && state != .processing {
+            state = setupIssues.isEmpty ? .ready : .needsSetup
+        }
+    }
+
     func refreshPermissionState() {
         permissionStatuses = permissionChecker.snapshot()
         setupIssues = permissionChecker.collectSetupIssues()
         lastRecordingBlock = setupIssues.first
 
-        guard state != .recording && state != .processing else {
+        guard state != .recording && state != .processing && state != .starting else {
             return
         }
 
@@ -378,6 +427,8 @@ final class AppModel {
     }
 
     func prepareForRecording() async -> RecordingPrepResult {
+        var microphoneJustGranted = false
+
         if permissionChecker.status(for: .microphone) == .notDetermined {
             let granted = await permissionChecker.requestMicrophoneAccess()
             refreshPermissionState()
@@ -385,6 +436,7 @@ final class AppModel {
                 lastRecordingBlock = .microphoneDenied
                 return .blocked(.microphoneDenied)
             }
+            microphoneJustGranted = true
         }
 
         refreshPermissionState()
@@ -400,11 +452,15 @@ final class AppModel {
         }
 
         lastRecordingBlock = nil
-        return .ready
+        return .ready(microphoneJustGranted: microphoneJustGranted)
     }
 
     func startRecording() async {
-        guard state == .ready else {
+        guard state == .ready || state == .needsSetup || state == .starting else {
+            return
+        }
+
+        guard !isStartingRecording else {
             return
         }
 
@@ -413,9 +469,21 @@ final class AppModel {
             return
         }
 
+        if state != .starting {
+            state = .starting
+        }
+
+        isStartingRecording = true
+        defer {
+            isStartingRecording = false
+        }
+
+        await recoverOrphanedRecordingIfNeeded()
+
         let preparation = await prepareForRecording()
-        guard preparation == .ready else {
+        guard case .ready(let microphoneJustGranted) = preparation else {
             stopRecordingAfterStart = false
+            restoreIdleState()
             return
         }
 
@@ -425,7 +493,8 @@ final class AppModel {
             try await recordingController.start(
                 deviceUID: configStore.configuration.microphoneDeviceID,
                 maxRecordingSeconds: configStore.configuration.maxRecordingSeconds,
-                language: configStore.configuration.language
+                language: configStore.configuration.language,
+                retryAudioCapture: microphoneJustGranted
             )
             state = .recording
 
@@ -435,12 +504,30 @@ final class AppModel {
             }
         } catch {
             stopRecordingAfterStart = false
+            await recoverOrphanedRecordingIfNeeded()
+            restoreIdleState()
             NSLog("Failed to start recording: \(error.localizedDescription)")
         }
     }
 
+    private func restoreIdleState() {
+        guard state != .recording && state != .processing else {
+            return
+        }
+        state = setupIssues.isEmpty ? .ready : .needsSetup
+    }
+
+    private func recoverOrphanedRecordingIfNeeded() async {
+        guard recordingController.isRecording, state != .recording, state != .processing else {
+            return
+        }
+
+        NSLog("Recovering orphaned recording session.")
+        _ = await recordingController.stop()
+    }
+
     func stopRecording() async {
-        if state == .ready {
+        if state == .ready || state == .starting {
             stopRecordingAfterStart = true
             return
         }

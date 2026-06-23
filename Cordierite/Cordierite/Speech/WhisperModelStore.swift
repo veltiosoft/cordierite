@@ -180,4 +180,12 @@ actor WhisperModelStore {
 
         return destination
     }
+
+    func delete(modelID: String) throws {
+        let url = try localURL(for: modelID)
+        guard FileManager.default.fileExists(atPath: url.path) else {
+            return
+        }
+        try FileManager.default.removeItem(at: url)
+    }
 }

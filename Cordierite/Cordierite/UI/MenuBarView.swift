@@ -47,7 +47,7 @@ struct MenuBarView: View {
                 await handleRecordingButton()
             }
         }
-        .disabled(appModel.state == .loading || appModel.state == .processing)
+        .disabled(appModel.state == .loading || appModel.state == .processing || appModel.state == .starting || !appModel.canStartRecognition)
 
         Menu("Input Mode") {
             ForEach(InputMode.allCases) { mode in
@@ -145,13 +145,13 @@ struct MenuBarView: View {
             }
         }
 
-        Menu(appModel.recognitionSelectionMenuTitle) {
+        Menu(appModel.recognitionMenuTitle) {
             Button {
                 Task {
                     await appModel.applyRecognitionSelection(.appleSpeech)
                 }
             } label: {
-                recognitionSelectionLabel(.appleSpeech)
+                recognitionOptionLabel(.appleSpeech)
             }
 
             Divider()
@@ -162,7 +162,27 @@ struct MenuBarView: View {
                         await appModel.applyRecognitionSelection(.whisper(model))
                     }
                 } label: {
-                    recognitionSelectionLabel(.whisper(model))
+                    recognitionOptionLabel(.whisper(model))
+                }
+            }
+        }
+
+        Menu("Manage Models") {
+            ForEach(WhisperModelOption.allCases) { model in
+                Menu(appModel.whisperModelManageLabel(for: model)) {
+                    if appModel.isWhisperModelDownloaded(model) {
+                        Button("Delete…") {
+                            Task {
+                                await appModel.deleteWhisperModel(model)
+                            }
+                        }
+                    } else {
+                        Button("Download…") {
+                            Task {
+                                await appModel.downloadWhisperModel(model)
+                            }
+                        }
+                    }
                 }
             }
         }
@@ -186,13 +206,11 @@ struct MenuBarView: View {
     }
 
     @ViewBuilder
-    private func recognitionSelectionLabel(_ selection: RecognitionSelection) -> some View {
+    private func recognitionOptionLabel(_ selection: RecognitionSelection) -> some View {
         if appModel.isRecognitionSelectionActive(selection) {
-            Label(appModel.recognitionSelectionLabel(for: selection), systemImage: "checkmark")
-        } else if case .whisper(let model) = selection, appModel.isWhisperModelDownloaded(model) {
-            Label(appModel.recognitionSelectionLabel(for: selection), systemImage: "arrow.down.circle.fill")
+            Label(appModel.recognitionOptionLabel(for: selection), systemImage: "checkmark")
         } else {
-            Text(appModel.recognitionSelectionLabel(for: selection))
+            Text(appModel.recognitionOptionLabel(for: selection))
         }
     }
 
@@ -234,18 +252,7 @@ struct MenuBarView: View {
             return
         }
 
-        if !appModel.canStartRecognition {
-            await appModel.requestWhisperModelDownload()
-            return
-        }
-
-        let result = await appModel.prepareForRecording()
-        switch result {
-        case .ready:
-            await appModel.startRecording()
-        case .blocked:
-            openWindow(id: "permissionDoctor")
-        }
+        await appModel.startRecording()
     }
 }
 

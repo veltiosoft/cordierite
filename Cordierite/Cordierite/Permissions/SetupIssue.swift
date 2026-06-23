@@ -1,12 +1,15 @@
 import Foundation
 
 enum SetupIssue: Identifiable, Equatable, Sendable {
+    case microphoneRequired
     case microphoneDenied
     case inputMonitoringRequired
     case accessibilityRequired
 
     var id: String {
         switch self {
+        case .microphoneRequired:
+            "microphoneRequired"
         case .microphoneDenied:
             "microphoneDenied"
         case .inputMonitoringRequired:
@@ -18,6 +21,8 @@ enum SetupIssue: Identifiable, Equatable, Sendable {
 
     var message: String {
         switch self {
+        case .microphoneRequired:
+            "Microphone permission is required"
         case .microphoneDenied:
             "Microphone permission is required"
         case .inputMonitoringRequired:
@@ -29,6 +34,8 @@ enum SetupIssue: Identifiable, Equatable, Sendable {
 
     var guidance: String {
         switch self {
+        case .microphoneRequired:
+            "Click Start Recording or Request Access in Permission Doctor to allow microphone access."
         case .microphoneDenied:
             "Allow microphone access in System Settings, or click Request Access if prompted."
         case .inputMonitoringRequired:
@@ -40,7 +47,7 @@ enum SetupIssue: Identifiable, Equatable, Sendable {
 
     var permissionKind: PermissionKind {
         switch self {
-        case .microphoneDenied:
+        case .microphoneRequired, .microphoneDenied:
             .microphone
         case .inputMonitoringRequired:
             .inputMonitoring
@@ -55,6 +62,6 @@ enum SetupIssue: Identifiable, Equatable, Sendable {
 }
 
 enum RecordingPrepResult: Equatable, Sendable {
-    case ready
+    case ready(microphoneJustGranted: Bool = false)
     case blocked(SetupIssue)
 }

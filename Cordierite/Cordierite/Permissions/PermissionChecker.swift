@@ -1,5 +1,6 @@
 import AppKit
 import AVFoundation
+import AVFAudio
 import ApplicationServices
 import Foundation
 import IOKit.hid
@@ -98,6 +99,8 @@ struct PermissionChecker {
         switch status(for: .microphone) {
         case .denied:
             issues.append(.microphoneDenied)
+        case .notDetermined:
+            issues.append(.microphoneRequired)
         default:
             break
         }
@@ -114,17 +117,13 @@ struct PermissionChecker {
     }
 
     var canStartRecording: Bool {
-        status(for: .microphone) != .denied &&
+        status(for: .microphone) == .granted &&
             status(for: .inputMonitoring) == .granted &&
             status(for: .accessibility) == .granted
     }
 
     func requestMicrophoneAccess() async -> Bool {
-        await withCheckedContinuation { continuation in
-            AVCaptureDevice.requestAccess(for: .audio) { granted in
-                continuation.resume(returning: granted)
-            }
-        }
+        await AVAudioApplication.requestRecordPermission()
     }
 
     @discardableResult
@@ -143,12 +142,12 @@ struct PermissionChecker {
     }
 
     private func microphoneStatus() -> PermissionStatus {
-        switch AVCaptureDevice.authorizationStatus(for: .audio) {
-        case .authorized:
+        switch AVAudioApplication.shared.recordPermission {
+        case .granted:
             .granted
-        case .denied, .restricted:
+        case .denied:
             .denied
-        case .notDetermined:
+        case .undetermined:
             .notDetermined
         @unknown default:
             .unknown

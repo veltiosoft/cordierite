@@ -60,16 +60,11 @@ struct SettingsView: View {
                 Section("Recognition") {
                     Picker("Recognition", selection: recognitionSelectionBinding) {
                         ForEach(RecognitionSelection.allCases) { selection in
-                            Text(appModel.recognitionSelectionLabel(for: selection)).tag(selection)
+                            Text(appModel.recognitionOptionLabel(for: selection)).tag(selection)
                         }
                     }
 
                     if configStore.configuration.recognitionEngine == .whisper {
-                        LabeledContent("Downloaded Models") {
-                            Text(appModel.downloadedWhisperModelsSummary)
-                                .foregroundStyle(.secondary)
-                        }
-
                         LabeledContent("Status") {
                             Text(appModel.whisperModelStatusSummary)
                                 .foregroundStyle(.secondary)
@@ -85,6 +80,26 @@ struct SettingsView: View {
                     Picker("Paste Method", selection: configStore.binding(\.pasteMethod)) {
                         ForEach(PasteMethodOption.allCases) { method in
                             Text(method.label).tag(method)
+                        }
+                    }
+                }
+
+                Section("Manage Models") {
+                    ForEach(WhisperModelOption.allCases) { model in
+                        LabeledContent(appModel.whisperModelManageLabel(for: model)) {
+                            if appModel.isWhisperModelDownloaded(model) {
+                                Button("Delete…") {
+                                    Task {
+                                        await appModel.deleteWhisperModel(model)
+                                    }
+                                }
+                            } else {
+                                Button("Download…") {
+                                    Task {
+                                        await appModel.downloadWhisperModel(model)
+                                    }
+                                }
+                            }
                         }
                     }
                 }

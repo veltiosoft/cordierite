@@ -153,6 +153,11 @@ final class WhisperEngine: SpeechRecognitionEngine {
         loadedModelID = nil
     }
 
+    func unloadLoadedModel() {
+        runner = nil
+        loadedModelID = nil
+    }
+
     private func loadRunnerIfNeeded() async throws {
         let modelID = whisperConfiguration.model
         if loadedModelID == modelID, runner != nil {

@@ -7,6 +7,17 @@ enum RecordingStopResult: Sendable {
     case failed(String)
 }
 
+enum RecordingStartError: LocalizedError {
+    case alreadyRecording
+
+    var errorDescription: String? {
+        switch self {
+        case .alreadyRecording:
+            "Recording is already in progress."
+        }
+    }
+}
+
 private final class PCMBufferBox: @unchecked Sendable {
     let buffer: AVAudioPCMBuffer
 
@@ -44,14 +55,14 @@ final class RecordingController {
     func start(
         deviceUID: String?,
         maxRecordingSeconds: Int,
-        language: RecognitionLanguageOption
+        language: RecognitionLanguageOption,
+        retryAudioCapture: Bool = false
     ) async throws {
         guard !isRecording else {
-            return
+            throw RecordingStartError.alreadyRecording
         }
 
         silenceDetector.reset()
-        recordingStartedAt = Date()
 
         let stream = try await speechEngine.start(language: language)
         recognitionTask = Task {
@@ -80,13 +91,14 @@ final class RecordingController {
             }
         }
 
-        try audioCapture.start(deviceUID: deviceUID) { [silenceDetector] buffer, _ in
-            silenceDetector.process(buffer: buffer)
-            guard let copied = buffer.deepCopy() else {
-                return
-            }
-            audioStream.continuation.yield(PCMBufferBox(copied))
+        do {
+            try await startAudioCapture(deviceUID: deviceUID, audioStream: audioStream, retry: retryAudioCapture)
+        } catch {
+            await rollbackFailedStart()
+            throw error
         }
+
+        recordingStartedAt = Date()
 
         maxDurationTask?.cancel()
         maxDurationTask = Task { [weak self] in
@@ -96,6 +108,43 @@ final class RecordingController {
             }
             await self.onMaxDurationReached?()
         }
+    }
+
+    private func startAudioCapture(
+        deviceUID: String?,
+        audioStream: (stream: AsyncStream<PCMBufferBox>, continuation: AsyncStream<PCMBufferBox>.Continuation),
+        retry: Bool
+    ) async throws {
+        let tapHandler: AVAudioNodeTapBlock = { [silenceDetector] buffer, _ in
+            silenceDetector.process(buffer: buffer)
+            guard let copied = buffer.deepCopy() else {
+                return
+            }
+            audioStream.continuation.yield(PCMBufferBox(copied))
+        }
+
+        do {
+            try audioCapture.start(deviceUID: deviceUID, tapHandler: tapHandler)
+        } catch {
+            guard retry else {
+                throw error
+            }
+
+            try await Task.sleep(for: .milliseconds(150))
+            try audioCapture.start(deviceUID: deviceUID, tapHandler: tapHandler)
+        }
+    }
+
+    private func rollbackFailedStart() async {
+        audioCapture.stop()
+        audioStreamContinuation?.finish()
+        audioStreamContinuation = nil
+        audioFeedTask?.cancel()
+        audioFeedTask = nil
+        recognitionTask?.cancel()
+        recognitionTask = nil
+        await speechEngine.cancelSession()
+        recordingStartedAt = nil
     }
 
     func stop() async -> RecordingStopResult {

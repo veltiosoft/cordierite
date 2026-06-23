@@ -3,6 +3,7 @@ import Foundation
 enum AppState: String, Sendable {
     case loading
     case ready
+    case starting
     case recording
     case processing
     case needsSetup
@@ -13,6 +14,8 @@ enum AppState: String, Sendable {
             "Loading"
         case .ready:
             "Ready"
+        case .starting:
+            "Starting"
         case .recording:
             "Recording"
         case .processing:
@@ -27,6 +30,8 @@ enum AppState: String, Sendable {
         case .loading:
             "hourglass"
         case .ready:
+            "mic"
+        case .starting:
             "mic"
         case .recording:
             "mic.fill"

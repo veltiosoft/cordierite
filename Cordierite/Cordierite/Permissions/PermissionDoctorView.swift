@@ -66,7 +66,7 @@ struct PermissionDoctorView: View {
             Label("Checking permissions…", systemImage: "hourglass")
                 .foregroundStyle(.secondary)
                 .font(.caption)
-        case .recording, .processing:
+        case .recording, .processing, .starting:
             Label("Finish current activity to update setup state", systemImage: "info.circle")
                 .foregroundStyle(.secondary)
                 .font(.caption)
