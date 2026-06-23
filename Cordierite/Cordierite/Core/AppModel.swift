@@ -564,13 +564,27 @@ final class AppModel {
 
         switch result {
         case .accepted(let duration, let peakRMS, let transcript):
-            lastTranscript = transcript
-            liveTranscript = transcript
-            NSLog("Transcript (\(duration)s, peak RMS \(peakRMS)): \(transcript)")
+            let processedTranscript = TextPostProcessor.process(
+                transcript,
+                removeFillerWords: configStore.configuration.removeFillerWords
+            )
+
+            guard !processedTranscript.isEmpty else {
+                liveTranscript = ""
+                recordingFeedback = .textRemovedByCleanup
+                NSLog("Recording discarded after post-processing: \(duration)s, peak RMS \(peakRMS)")
+                state = .ready
+                reloadHotkeyMonitor()
+                return
+            }
+
+            lastTranscript = processedTranscript
+            liveTranscript = processedTranscript
+            NSLog("Transcript (\(duration)s, peak RMS \(peakRMS)): \(processedTranscript)")
 
             do {
                 try await pasteController.paste(
-                    text: transcript,
+                    text: processedTranscript,
                     method: configStore.configuration.pasteMethod,
                     restoreClipboard: configStore.configuration.restoreClipboardText
                 )

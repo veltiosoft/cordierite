@@ -34,6 +34,12 @@ struct RecordingFeedback: Equatable, Identifiable, Sendable {
         action: nil
     )
 
+    static let textRemovedByCleanup = RecordingFeedback(
+        title: "Nothing left to paste",
+        message: "Speech was recognized, but cleanup removed all text. Turn off Remove Filler Words or say more.",
+        action: nil
+    )
+
     static let recognitionFailed = RecordingFeedback(
         title: "Could not transcribe this recording",
         message: "Try recording again.",

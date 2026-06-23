@@ -2,7 +2,7 @@
 
 - Priority: Medium
 - Created: 2026-06-22
-- Completed: {YYYY-MM-DD}
+- Completed: 2026-06-23
 - Model: Composer 2.5
 - Branch: feature/add-text-post-processing
 - Polished: {YYYY-MM-DD}
@@ -33,5 +33,6 @@ Medium。Whisper 導入で認識品質は上がったが、貼り付けテキス
 
 ## 解決方法
 
-- post-processor モジュールを追加し、`finalizeRecording` パイプラインに挿入する
-- Settings に関連トグルを追加する
+- `Core/TextPostProcessor.swift` に純関数の post-processor を追加し、trim・連続空白正規化・句読点 spacing 調整を常時適用する
+- `AppConfiguration.removeFillerWords`（既定 ON）と Settings の **Remove Filler Words** トグルでフィラー除去を切り替え可能にした
+- `AppModel.stopRecording` の貼り付け前に post-processor を通し、整形後に空になった場合は無音破棄として扱う

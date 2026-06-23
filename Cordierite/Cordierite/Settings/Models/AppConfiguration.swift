@@ -128,4 +128,70 @@ struct AppConfiguration: Codable, Equatable, Sendable {
     var pasteMethod: PasteMethodOption = .pasteboardCommandV
     var maxRecordingSeconds: Int = 120
     var restoreClipboardText: Bool = true
+    var removeFillerWords: Bool = true
+
+    init(
+        inputMode: InputMode = .hold,
+        hotkey: HotkeyOption = .rightOption,
+        language: RecognitionLanguageOption = .system,
+        microphoneDeviceID: String? = nil,
+        recognitionEngine: RecognitionEngineOption = .appleSpeech,
+        whisper: WhisperConfiguration = WhisperConfiguration(),
+        pasteMethod: PasteMethodOption = .pasteboardCommandV,
+        maxRecordingSeconds: Int = 120,
+        restoreClipboardText: Bool = true,
+        removeFillerWords: Bool = true
+    ) {
+        self.inputMode = inputMode
+        self.hotkey = hotkey
+        self.language = language
+        self.microphoneDeviceID = microphoneDeviceID
+        self.recognitionEngine = recognitionEngine
+        self.whisper = whisper
+        self.pasteMethod = pasteMethod
+        self.maxRecordingSeconds = maxRecordingSeconds
+        self.restoreClipboardText = restoreClipboardText
+        self.removeFillerWords = removeFillerWords
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        inputMode = try container.decode(InputMode.self, forKey: .inputMode)
+        hotkey = try container.decode(HotkeyOption.self, forKey: .hotkey)
+        language = try container.decode(RecognitionLanguageOption.self, forKey: .language)
+        microphoneDeviceID = try container.decodeIfPresent(String.self, forKey: .microphoneDeviceID)
+        recognitionEngine = try container.decode(RecognitionEngineOption.self, forKey: .recognitionEngine)
+        whisper = try container.decode(WhisperConfiguration.self, forKey: .whisper)
+        pasteMethod = try container.decode(PasteMethodOption.self, forKey: .pasteMethod)
+        maxRecordingSeconds = try container.decode(Int.self, forKey: .maxRecordingSeconds)
+        restoreClipboardText = try container.decode(Bool.self, forKey: .restoreClipboardText)
+        removeFillerWords = try container.decodeIfPresent(Bool.self, forKey: .removeFillerWords) ?? true
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(inputMode, forKey: .inputMode)
+        try container.encode(hotkey, forKey: .hotkey)
+        try container.encode(language, forKey: .language)
+        try container.encodeIfPresent(microphoneDeviceID, forKey: .microphoneDeviceID)
+        try container.encode(recognitionEngine, forKey: .recognitionEngine)
+        try container.encode(whisper, forKey: .whisper)
+        try container.encode(pasteMethod, forKey: .pasteMethod)
+        try container.encode(maxRecordingSeconds, forKey: .maxRecordingSeconds)
+        try container.encode(restoreClipboardText, forKey: .restoreClipboardText)
+        try container.encode(removeFillerWords, forKey: .removeFillerWords)
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case inputMode
+        case hotkey
+        case language
+        case microphoneDeviceID
+        case recognitionEngine
+        case whisper
+        case pasteMethod
+        case maxRecordingSeconds
+        case restoreClipboardText
+        case removeFillerWords
+    }
 }
