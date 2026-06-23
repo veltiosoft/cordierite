@@ -8,10 +8,24 @@ struct MenuBarView: View {
         Text(appModel.state.menuBarTitle)
             .font(.headline)
 
-        if appModel.state == .loading, let fraction = appModel.assetDownloadFraction {
-            Text("Downloading Apple Speech assets… \(Int(fraction * 100))%")
-                .font(.caption)
-                .foregroundStyle(.secondary)
+        if appModel.state == .loading {
+            if let message = appModel.loadingStatusMessage {
+                if let fraction = appModel.assetDownloadFraction, fraction > 0, fraction < 1 {
+                    Text("\(message) \(Int(fraction * 100))%")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text(message)
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+                Divider()
+            }
+        }
+
+        if appModel.configStore.configuration.recognitionEngine == .whisper,
+           !appModel.whisperModelIsReady || appModel.whisperDownloadErrorMessage != nil {
+            whisperSetupSection
             Divider()
         }
 
@@ -51,17 +65,32 @@ struct MenuBarView: View {
         }
 
         Menu("Language") {
-            ForEach(RecognitionLanguageOption.allCases) { language in
-                Button {
-                    appModel.configStore.update { $0.language = language }
-                    Task {
-                        await appModel.applyLanguageConfiguration()
+            if appModel.configStore.configuration.recognitionEngine == .whisper {
+                ForEach(WhisperLanguageOption.allCases) { language in
+                    Button {
+                        appModel.configStore.update { $0.whisper.language = language }
+                        appModel.applyWhisperLanguageConfiguration()
+                    } label: {
+                        if appModel.configStore.configuration.whisper.language == language {
+                            Label(language.label, systemImage: "checkmark")
+                        } else {
+                            Text(language.label)
+                        }
                     }
-                } label: {
-                    if appModel.configStore.configuration.language == language {
-                        Label(appModel.languageMenuLabel(for: language), systemImage: "checkmark")
-                    } else {
-                        Text(appModel.languageMenuLabel(for: language))
+                }
+            } else {
+                ForEach(RecognitionLanguageOption.allCases) { language in
+                    Button {
+                        appModel.configStore.update { $0.language = language }
+                        Task {
+                            await appModel.applyLanguageConfiguration()
+                        }
+                    } label: {
+                        if appModel.configStore.configuration.language == language {
+                            Label(appModel.languageMenuLabel(for: language), systemImage: "checkmark")
+                        } else {
+                            Text(appModel.languageMenuLabel(for: language))
+                        }
                     }
                 }
             }
@@ -116,16 +145,24 @@ struct MenuBarView: View {
             }
         }
 
-        Menu("Recognition Engine") {
-            ForEach(RecognitionEngineOption.allCases) { engine in
+        Menu(appModel.recognitionSelectionMenuTitle) {
+            Button {
+                Task {
+                    await appModel.applyRecognitionSelection(.appleSpeech)
+                }
+            } label: {
+                recognitionSelectionLabel(.appleSpeech)
+            }
+
+            Divider()
+
+            ForEach(WhisperModelOption.allCases) { model in
                 Button {
-                    appModel.configStore.update { $0.recognitionEngine = engine }
-                } label: {
-                    if appModel.configStore.configuration.recognitionEngine == engine {
-                        Label(engine.label, systemImage: "checkmark")
-                    } else {
-                        Text(engine.label)
+                    Task {
+                        await appModel.applyRecognitionSelection(.whisper(model))
                     }
+                } label: {
+                    recognitionSelectionLabel(.whisper(model))
                 }
             }
         }
@@ -149,6 +186,34 @@ struct MenuBarView: View {
     }
 
     @ViewBuilder
+    private func recognitionSelectionLabel(_ selection: RecognitionSelection) -> some View {
+        if appModel.isRecognitionSelectionActive(selection) {
+            Label(appModel.recognitionSelectionLabel(for: selection), systemImage: "checkmark")
+        } else if case .whisper(let model) = selection, appModel.isWhisperModelDownloaded(model) {
+            Label(appModel.recognitionSelectionLabel(for: selection), systemImage: "arrow.down.circle.fill")
+        } else {
+            Text(appModel.recognitionSelectionLabel(for: selection))
+        }
+    }
+
+    @ViewBuilder
+    private var whisperSetupSection: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            if !appModel.whisperModelIsReady {
+                Text(appModel.whisperModelStatusSummary)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+            }
+
+            if let error = appModel.whisperDownloadErrorMessage {
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+            }
+        }
+    }
+
+    @ViewBuilder
     private var setupBanner: some View {
         VStack(alignment: .leading, spacing: 6) {
             if let issue = appModel.setupIssues.first {
@@ -166,6 +231,11 @@ struct MenuBarView: View {
     private func handleRecordingButton() async {
         if appModel.state == .recording {
             await appModel.stopRecording()
+            return
+        }
+
+        if !appModel.canStartRecognition {
+            await appModel.requestWhisperModelDownload()
             return
         }
 

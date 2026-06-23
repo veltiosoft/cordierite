@@ -4,6 +4,8 @@ import Speech
 
 @MainActor
 final class SpeechAnalyzerEngine: SpeechRecognitionEngine {
+    let loadingStatusMessage = "Downloading Apple Speech assets…"
+
     private(set) var downloadProgress: Progress?
 
     private var transcriber: SpeechTranscriber?
@@ -179,6 +181,10 @@ final class SpeechAnalyzerEngine: SpeechRecognitionEngine {
         downloadProgress = request.progress
         try await request.downloadAndInstall()
         downloadProgress = nil
+    }
+
+    func shutdown() async {
+        await cancelSession()
     }
 
     private func cleanupSession() {

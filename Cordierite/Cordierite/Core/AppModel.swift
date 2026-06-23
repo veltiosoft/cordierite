@@ -11,19 +11,134 @@ final class AppModel {
     private(set) var liveTranscript: String = ""
     private(set) var lastTranscript: String?
     private(set) var assetDownloadFraction: Double?
+    private(set) var loadingStatusMessage: String?
     private(set) var permissionStatuses: [PermissionKind: PermissionStatus] = [:]
     private(set) var resolvedSystemSpeechLocale: Locale?
+    private(set) var whisperModelIsDownloaded = false
+    private(set) var whisperModelIsReady = false
+    private(set) var downloadedWhisperModels: Set<WhisperModelOption> = []
+    private(set) var whisperDownloadErrorMessage: String?
+
+    var selectedWhisperModel: WhisperModelOption {
+        WhisperModelOption.resolved(from: configStore.configuration.whisper.model)
+    }
+
+    var whisperModelStatusSummary: String {
+        let model = selectedWhisperModel
+        if whisperModelIsReady {
+            return "\(model.shortLabel) is ready."
+        }
+        if whisperModelIsDownloaded {
+            return "\(model.shortLabel) is downloaded but not loaded."
+        }
+        return "\(model.shortLabel) is not downloaded."
+    }
+
+    var canStartRecognition: Bool {
+        if configStore.configuration.recognitionEngine == .whisper {
+            return whisperModelIsReady
+        }
+        return true
+    }
+
+    var recognitionSelectionMenuTitle: String {
+        "Recognition: \(recognitionSelectionLabel(for: currentRecognitionSelection))"
+    }
+
+    var currentRecognitionSelection: RecognitionSelection {
+        switch configStore.configuration.recognitionEngine {
+        case .appleSpeech:
+            .appleSpeech
+        case .whisper:
+            .whisper(selectedWhisperModel)
+        }
+    }
+
+    var downloadedWhisperModelsSummary: String {
+        let labels = WhisperModelOption.allCases
+            .filter { downloadedWhisperModels.contains($0) }
+            .map(\.engineSelectionLabel)
+
+        if labels.isEmpty {
+            return "None"
+        }
+        return labels.joined(separator: ", ")
+    }
+
+    func recognitionSelectionLabel(for selection: RecognitionSelection) -> String {
+        switch selection {
+        case .appleSpeech:
+            "Apple Speech"
+        case .whisper(let model):
+            whisperRecognitionSelectionLabel(for: model)
+        }
+    }
+
+    func whisperRecognitionSelectionLabel(for model: WhisperModelOption) -> String {
+        var label = "Whisper · \(model.menuLabel)"
+        if downloadedWhisperModels.contains(model) {
+            label += " · Downloaded"
+        }
+        return label
+    }
+
+    func isRecognitionSelectionActive(_ selection: RecognitionSelection) -> Bool {
+        currentRecognitionSelection == selection
+    }
+
+    func isWhisperModelDownloaded(_ model: WhisperModelOption) -> Bool {
+        downloadedWhisperModels.contains(model)
+    }
+
+    func applyRecognitionSelection(_ selection: RecognitionSelection) async {
+        switch selection {
+        case .appleSpeech:
+            guard configStore.configuration.recognitionEngine != .appleSpeech else {
+                return
+            }
+            configStore.update { $0.recognitionEngine = .appleSpeech }
+            configStore.save()
+            await applyRecognitionEngineConfiguration()
+
+        case .whisper(let model):
+            let wasWhisper = configStore.configuration.recognitionEngine == .whisper
+            let previousModel = selectedWhisperModel
+
+            if wasWhisper && previousModel == model {
+                if !whisperModelIsReady {
+                    await requestWhisperModelDownload()
+                }
+                return
+            }
+
+            configStore.update {
+                $0.recognitionEngine = .whisper
+                $0.whisper.model = model.rawValue
+            }
+
+            if !wasWhisper {
+                await applyRecognitionEngineConfiguration()
+            }
+
+            await applyWhisperModelConfiguration()
+        }
+    }
 
     let configStore = ConfigStore()
     let permissionChecker = PermissionChecker()
-    private let speechEngine = SpeechAnalyzerEngine()
+    private var speechEngine: any SpeechRecognitionEngine
     private let hotkeyMonitor = HotkeyMonitor()
     private let recordingController: RecordingController
     private let pasteController = PasteController()
     private var stopRecordingAfterStart = false
 
     init() {
-        recordingController = RecordingController(speechEngine: speechEngine)
+        let engine = SpeechEngineFactory.makeEngine(
+            for: configStore.configuration.recognitionEngine,
+            whisperConfiguration: configStore.configuration.whisper
+        )
+        speechEngine = engine
+        recordingController = RecordingController(speechEngine: engine)
 
         recordingController.onMaxDurationReached = { [weak self] in
             await self?.stopRecording()
@@ -43,6 +158,7 @@ final class AppModel {
         ) { [weak self] _ in
             Task { @MainActor in
                 self?.refreshPermissionState()
+                await self?.refreshWhisperModelStatus()
             }
         }
 
@@ -54,6 +170,7 @@ final class AppModel {
     func bootstrap() async {
         state = .loading
         refreshMicrophoneList()
+        loadingStatusMessage = speechEngine.loadingStatusMessage
 
         do {
             let progressTask = Task {
@@ -66,12 +183,107 @@ final class AppModel {
 
             try await speechEngine.prepare(language: configStore.configuration.language)
             assetDownloadFraction = nil
-            await refreshResolvedSystemSpeechLocale()
+            if configStore.configuration.recognitionEngine == .appleSpeech {
+                await refreshResolvedSystemSpeechLocale()
+            }
         } catch {
             assetDownloadFraction = nil
-            NSLog("Speech asset preparation failed: \(error.localizedDescription)")
+            NSLog("Speech engine preparation failed: \(error.localizedDescription)")
         }
 
+        loadingStatusMessage = nil
+        await refreshWhisperModelStatus()
+        refreshPermissionState()
+        reloadHotkeyMonitor()
+    }
+
+    func refreshWhisperModelStatus() async {
+        whisperDownloadErrorMessage = nil
+
+        let store = WhisperModelStore.shared
+        var downloaded = Set<WhisperModelOption>()
+        for model in WhisperModelOption.allCases {
+            if (try? await store.isDownloaded(modelID: model.rawValue)) == true {
+                downloaded.insert(model)
+            }
+        }
+        downloadedWhisperModels = downloaded
+
+        guard configStore.configuration.recognitionEngine == .whisper,
+              let whisperEngine = speechEngine as? WhisperEngine else {
+            whisperModelIsDownloaded = false
+            whisperModelIsReady = false
+            return
+        }
+
+        whisperModelIsDownloaded = downloaded.contains(selectedWhisperModel)
+        whisperModelIsReady = whisperEngine.isReady
+    }
+
+    func applyWhisperModelConfiguration() async {
+        configStore.save()
+
+        guard configStore.configuration.recognitionEngine == .whisper,
+              let whisperEngine = speechEngine as? WhisperEngine else {
+            await refreshWhisperModelStatus()
+            return
+        }
+
+        whisperEngine.updateConfiguration(configStore.configuration.whisper)
+
+        if await whisperEngine.isSelectedModelDownloaded() {
+            loadingStatusMessage = "Loading \(selectedWhisperModel.shortLabel)…"
+            state = .loading
+            defer {
+                loadingStatusMessage = nil
+            }
+            try? await whisperEngine.prepare(language: configStore.configuration.language)
+        } else {
+            await requestWhisperModelDownload()
+        }
+
+        await refreshWhisperModelStatus()
+        if state != .recording && state != .processing {
+            state = setupIssues.isEmpty ? .ready : .needsSetup
+        }
+    }
+
+    func requestWhisperModelDownload() async {
+        guard configStore.configuration.recognitionEngine == .whisper,
+              let whisperEngine = speechEngine as? WhisperEngine else {
+            return
+        }
+
+        let model = selectedWhisperModel
+        guard WhisperModelDownloadPrompt.confirmDownload(for: model) else {
+            return
+        }
+
+        whisperDownloadErrorMessage = nil
+        state = .loading
+        loadingStatusMessage = whisperEngine.loadingStatusMessage
+
+        let progressTask = Task {
+            while !Task.isCancelled {
+                assetDownloadFraction = whisperEngine.downloadProgress?.fractionCompleted
+                try? await Task.sleep(for: .milliseconds(100))
+            }
+        }
+        defer {
+            progressTask.cancel()
+            assetDownloadFraction = nil
+            loadingStatusMessage = nil
+        }
+
+        do {
+            try await whisperEngine.downloadSelectedModel()
+            whisperDownloadErrorMessage = nil
+        } catch {
+            whisperDownloadErrorMessage = error.localizedDescription
+            NSLog("Whisper model download failed: \(error.localizedDescription)")
+        }
+
+        await refreshWhisperModelStatus()
         refreshPermissionState()
         reloadHotkeyMonitor()
     }
@@ -126,14 +338,20 @@ final class AppModel {
 
     func applyLanguageConfiguration() async {
         configStore.save()
-        state = .loading
-        do {
-            try await speechEngine.prepare(language: configStore.configuration.language)
-        } catch {
-            NSLog("Speech asset preparation failed: \(error.localizedDescription)")
+        await reloadSpeechEngine(prepareLanguage: configStore.configuration.language)
+    }
+
+    func applyRecognitionEngineConfiguration() async {
+        configStore.save()
+        await reloadSpeechEngine(prepareLanguage: configStore.configuration.language)
+        await refreshWhisperModelStatus()
+    }
+
+    func applyWhisperLanguageConfiguration() {
+        configStore.save()
+        if let whisperEngine = speechEngine as? WhisperEngine {
+            whisperEngine.updateConfiguration(configStore.configuration.whisper)
         }
-        await refreshResolvedSystemSpeechLocale()
-        refreshPermissionState()
     }
 
     func languageMenuLabel(for option: RecognitionLanguageOption) -> String {
@@ -145,6 +363,18 @@ final class AppModel {
 
     private func refreshResolvedSystemSpeechLocale() async {
         resolvedSystemSpeechLocale = await RecognitionLanguageResolver.resolvedLocale(for: .system)
+    }
+
+    private func reloadSpeechEngine(prepareLanguage language: RecognitionLanguageOption) async {
+        state = .loading
+        await speechEngine.shutdown()
+
+        speechEngine = SpeechEngineFactory.makeEngine(
+            for: configStore.configuration.recognitionEngine,
+            whisperConfiguration: configStore.configuration.whisper
+        )
+        recordingController.setSpeechEngine(speechEngine)
+        await bootstrap()
     }
 
     func prepareForRecording() async -> RecordingPrepResult {
@@ -175,6 +405,11 @@ final class AppModel {
 
     func startRecording() async {
         guard state == .ready else {
+            return
+        }
+
+        guard canStartRecognition else {
+            NSLog("Recording blocked: Whisper model is not ready.")
             return
         }
 
@@ -305,7 +540,7 @@ final class AppModel {
             if recordingController.isRecording {
                 _ = await recordingController.stop()
             }
-            await speechEngine.cancelSession()
+            await speechEngine.shutdown()
             NSApplication.shared.terminate(nil)
         }
     }

@@ -6,6 +6,10 @@
 	objectVersion = 77;
 	objects = {
 
+/* Begin PBXBuildFile section */
+		B32FD7E52FE970E600B10FAE /* WhisperCppBridge in Frameworks */ = {isa = PBXBuildFile; productRef = B384A4932FE7B900009AEE1D /* WhisperCppBridge */; };
+/* End PBXBuildFile section */
+
 /* Begin PBXFileReference section */
 		B384A4832FE7B874009AEE1D /* Cordierite.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Cordierite.app; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -22,6 +26,7 @@
 		B384A4802FE7B874009AEE1D /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			files = (
+				B32FD7E52FE970E600B10FAE /* WhisperCppBridge in Frameworks */,
 			);
 		};
 /* End PBXFrameworksBuildPhase section */
@@ -60,6 +65,9 @@
 				B384A4852FE7B874009AEE1D /* Cordierite */,
 			);
 			name = Cordierite;
+			packageProductDependencies = (
+				B384A4932FE7B900009AEE1D /* WhisperCppBridge */,
+			);
 			productName = Cordierite;
 			productReference = B384A4832FE7B874009AEE1D /* Cordierite.app */;
 			productType = "com.apple.product-type.application";
@@ -88,6 +96,9 @@
 			);
 			mainGroup = B384A47A2FE7B874009AEE1D;
 			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				B384A4922FE7B900009AEE1D /* XCLocalSwiftPackageReference "Packages/WhisperCpp" */,
+			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = B384A4842FE7B874009AEE1D /* Products */;
 			projectDirPath = "";
@@ -327,6 +338,21 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		B384A4922FE7B900009AEE1D /* XCLocalSwiftPackageReference "Packages/WhisperCpp" */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = Packages/WhisperCpp;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		B384A4932FE7B900009AEE1D /* WhisperCppBridge */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = B384A4922FE7B900009AEE1D /* XCLocalSwiftPackageReference "Packages/WhisperCpp" */;
+			productName = WhisperCppBridge;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = B384A47B2FE7B874009AEE1D /* Project object */;
 	validationLevel = 1;

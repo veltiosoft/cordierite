@@ -19,7 +19,7 @@ private final class PCMBufferBox: @unchecked Sendable {
 final class RecordingController {
     private let audioCapture = AudioCaptureSession()
     private let silenceDetector = SilenceDetector()
-    private let speechEngine: SpeechAnalyzerEngine
+    private var speechEngine: any SpeechRecognitionEngine
     private var recordingStartedAt: Date?
     private var maxDurationTask: Task<Void, Never>?
     private var recognitionTask: Task<Void, Never>?
@@ -33,7 +33,11 @@ final class RecordingController {
         recordingStartedAt != nil
     }
 
-    init(speechEngine: SpeechAnalyzerEngine) {
+    init(speechEngine: any SpeechRecognitionEngine) {
+        self.speechEngine = speechEngine
+    }
+
+    func setSpeechEngine(_ speechEngine: any SpeechRecognitionEngine) {
         self.speechEngine = speechEngine
     }
 

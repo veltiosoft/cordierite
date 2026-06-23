@@ -27,14 +27,25 @@ struct SettingsView: View {
                         appModel.applyInputConfiguration()
                     }
 
-                    Picker("Language", selection: configStore.binding(\.language)) {
-                        ForEach(RecognitionLanguageOption.allCases) { language in
-                            Text(language.label).tag(language)
+                    if configStore.configuration.recognitionEngine == .whisper {
+                        Picker("Language", selection: configStore.binding(\.whisper.language)) {
+                            ForEach(WhisperLanguageOption.allCases) { language in
+                                Text(language.label).tag(language)
+                            }
                         }
-                    }
-                    .onChange(of: configStore.configuration.language) { _, _ in
-                        Task {
-                            await appModel.applyLanguageConfiguration()
+                        .onChange(of: configStore.configuration.whisper.language) { _, _ in
+                            appModel.applyWhisperLanguageConfiguration()
+                        }
+                    } else {
+                        Picker("Language", selection: configStore.binding(\.language)) {
+                            ForEach(RecognitionLanguageOption.allCases) { language in
+                                Text(language.label).tag(language)
+                            }
+                        }
+                        .onChange(of: configStore.configuration.language) { _, _ in
+                            Task {
+                                await appModel.applyLanguageConfiguration()
+                            }
                         }
                     }
 
@@ -47,9 +58,27 @@ struct SettingsView: View {
                 }
 
                 Section("Recognition") {
-                    Picker("Engine", selection: configStore.binding(\.recognitionEngine)) {
-                        ForEach(RecognitionEngineOption.allCases) { engine in
-                            Text(engine.label).tag(engine)
+                    Picker("Recognition", selection: recognitionSelectionBinding) {
+                        ForEach(RecognitionSelection.allCases) { selection in
+                            Text(appModel.recognitionSelectionLabel(for: selection)).tag(selection)
+                        }
+                    }
+
+                    if configStore.configuration.recognitionEngine == .whisper {
+                        LabeledContent("Downloaded Models") {
+                            Text(appModel.downloadedWhisperModelsSummary)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        LabeledContent("Status") {
+                            Text(appModel.whisperModelStatusSummary)
+                                .foregroundStyle(.secondary)
+                        }
+
+                        if let error = appModel.whisperDownloadErrorMessage {
+                            Text(error)
+                                .font(.caption)
+                                .foregroundStyle(.red)
                         }
                     }
 
@@ -85,6 +114,17 @@ struct SettingsView: View {
             get: { appModel.configStore.configuration.microphoneDeviceID },
             set: { newValue in
                 appModel.configStore.update { $0.microphoneDeviceID = newValue }
+            }
+        )
+    }
+
+    private var recognitionSelectionBinding: Binding<RecognitionSelection> {
+        Binding(
+            get: { appModel.currentRecognitionSelection },
+            set: { newValue in
+                Task {
+                    await appModel.applyRecognitionSelection(newValue)
+                }
             }
         )
     }

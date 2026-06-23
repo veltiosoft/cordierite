@@ -13,6 +13,9 @@ enum SpeechEngineError: LocalizedError {
     case conversionFailed
     case sessionNotActive
     case transcriptionFailed
+    case whisperUnavailable
+    case whisperModelDownloadFailed
+    case whisperModelNotReady
 
     var errorDescription: String? {
         switch self {
@@ -28,14 +31,32 @@ enum SpeechEngineError: LocalizedError {
             "Speech recognition is not active."
         case .transcriptionFailed:
             "Could not transcribe this recording."
+        case .whisperUnavailable:
+            "Whisper is not available on this device."
+        case .whisperModelDownloadFailed:
+            "Could not download the Whisper model."
+        case .whisperModelNotReady:
+            "Download the selected Whisper model before recording."
         }
     }
 }
 
+@MainActor
 protocol SpeechRecognitionEngine: AnyObject {
-    @MainActor func prepare(language: RecognitionLanguageOption) async throws
-    @MainActor func start(language: RecognitionLanguageOption) async throws -> AsyncThrowingStream<RecognitionEvent, Error>
-    @MainActor func processAudioBuffer(_ buffer: AVAudioPCMBuffer) throws
-    @MainActor func stop() async throws -> String
-    @MainActor func cancelSession() async
+    var downloadProgress: Progress? { get }
+    var liveDisplayText: String { get }
+    var loadingStatusMessage: String { get }
+
+    func prepare(language: RecognitionLanguageOption) async throws
+    func start(language: RecognitionLanguageOption) async throws -> AsyncThrowingStream<RecognitionEvent, Error>
+    func processAudioBuffer(_ buffer: AVAudioPCMBuffer) throws
+    func stop() async throws -> String
+    func cancelSession() async
+    func shutdown() async
+}
+
+extension SpeechRecognitionEngine {
+    var downloadProgress: Progress? { nil }
+    var liveDisplayText: String { "" }
+    var loadingStatusMessage: String { "" }
 }
