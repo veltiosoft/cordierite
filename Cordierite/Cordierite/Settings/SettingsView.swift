@@ -113,6 +113,8 @@ struct SettingsView: View {
                     )
 
                     Toggle("Restore Clipboard Text", isOn: configStore.binding(\.restoreClipboardText))
+
+                    Toggle("Remove Filler Words", isOn: configStore.binding(\.removeFillerWords))
                 }
             }
             .formStyle(.grouped)

@@ -128,4 +128,5 @@ struct AppConfiguration: Codable, Equatable, Sendable {
     var pasteMethod: PasteMethodOption = .pasteboardCommandV
     var maxRecordingSeconds: Int = 120
     var restoreClipboardText: Bool = true
+    var removeFillerWords: Bool = true
 }
