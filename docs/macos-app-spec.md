@@ -484,7 +484,7 @@ MVP では次のテストを行う。
 - Manage Models から DL したモデルが Recognition に現れること。
 - フィラー除去 ON/OFF が post-processing に反映されること。
 
-精度評価では、同じ音声セットを Apple Speech と Whisper で比較する（未実施）。
+精度評価では、同じ音声セットを Apple Speech と Whisper で比較する（`docs/benchmark/speech-engine-comparison.md` 参照）。
 評価指標は CER、WER、キー解放から貼り付けまでの時間、常駐メモリ、失敗率とする。
 
 ## 実装マイルストーン
@@ -505,9 +505,9 @@ MVP では次のテストを行う。
 
 貼り付けとクリップボード復元を実装する。
 
-### Milestone 5（未実施）
+### Milestone 5（完了）
 
-日本語と英語の実音声で Apple Speech と Whisper の精度と遅延を測る。
+日本語と英語の実音声で Apple Speech と Whisper の精度と遅延を測る。結果は `docs/benchmark/speech-engine-comparison.md` に記載。
 
 ### Milestone 6（完了）
 
