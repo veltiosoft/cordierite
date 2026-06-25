@@ -1,0 +1,209 @@
+:root {
+  color-scheme: light;
+  --bg: #f4f1ea;
+  --text: #16140f;
+  --muted: #6b6557;
+  --accent: #003399;
+  --line: #dcd6c8;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "Hiragino Sans", "Noto Sans JP", "Helvetica Neue", Arial, sans-serif;
+  font-size: 1.125rem;
+  line-height: 1.55;
+  text-rendering: optimizeLegibility;
+}
+
+a {
+  color: var(--accent);
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.18em;
+}
+
+a:hover {
+  text-decoration: underline;
+}
+
+a:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+
+.skip-link {
+  position: absolute;
+  left: 1.5rem;
+  top: 1.5rem;
+  transform: translateY(-200%);
+  padding: 0.5rem 0.75rem;
+  background: var(--text);
+  color: var(--bg);
+}
+
+.skip-link:focus {
+  transform: translateY(0);
+}
+
+.page {
+  width: min(72rem, calc(100% - 3rem));
+  margin: 0 auto;
+  padding: 2.5rem 0 6rem;
+}
+
+header {
+  margin-bottom: 4rem;
+}
+
+.site-label {
+  margin: 0 0 1.5rem;
+  color: var(--muted);
+  font-size: 1.125rem;
+}
+
+header h1 {
+  margin: 0;
+  color: var(--text);
+  font-size: clamp(3rem, 12vw, 7rem);
+  font-weight: 400;
+  letter-spacing: -0.04em;
+  line-height: 0.95;
+}
+
+.header-rule {
+  height: 1px;
+  margin: 2rem 0 1rem;
+  background: var(--line);
+}
+
+header nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem 1.75rem;
+  font-size: 1.125rem;
+}
+
+header nav a {
+  color: var(--text);
+  text-decoration: none;
+}
+
+header nav a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+}
+
+.intro {
+  max-width: 18em;
+  margin: 0 0 2rem;
+  color: var(--text);
+  font-size: clamp(2rem, 5vw, 3.75rem);
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  line-height: 1.12;
+}
+
+.summary {
+  max-width: 36em;
+  margin: 0 0 1rem;
+  font-size: 1.25rem;
+  line-height: 1.5;
+}
+
+section {
+  padding: 4rem 0 0;
+}
+
+section:first-of-type {
+  margin-top: 4rem;
+}
+
+h2 {
+  margin: 0 0 1.5rem;
+  color: var(--text);
+  font-size: clamp(1.75rem, 3vw, 2.75rem);
+  font-weight: 400;
+  letter-spacing: -0.03em;
+  line-height: 1.1;
+}
+
+h3 {
+  margin: 2.5rem 0 0.75rem;
+  color: var(--text);
+  font-size: 1.375rem;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+}
+
+p {
+  margin: 0.75rem 0;
+  max-width: 40em;
+}
+
+ul {
+  margin: 0.5rem 0 0;
+  padding-left: 1.25rem;
+  max-width: 42em;
+}
+
+li + li {
+  margin-top: 0.6rem;
+}
+
+.download-link {
+  display: inline-block;
+  margin: 0.5rem 0 1rem;
+  color: var(--accent);
+  font-size: 1.375rem;
+  font-weight: 400;
+  letter-spacing: -0.02em;
+  text-decoration: underline;
+}
+
+.note {
+  max-width: 40em;
+  color: var(--muted);
+  font-size: 1rem;
+  line-height: 1.55;
+}
+
+.price {
+  margin: 0.25rem 0 0.75rem;
+  color: var(--muted);
+  font-size: 1.125rem;
+}
+
+footer {
+  margin-top: 5rem;
+  padding-top: 1.5rem;
+  color: var(--muted);
+  font-size: 1rem;
+}
+
+@media (max-width: 640px) {
+  .page {
+    width: min(100%, calc(100% - 2rem));
+    padding-top: 1.5rem;
+  }
+
+  header {
+    margin-bottom: 3rem;
+  }
+
+  .intro {
+    max-width: none;
+  }
+
+  section {
+    padding-top: 3rem;
+  }
+
+  section:first-of-type {
+    margin-top: 3rem;
+  }
+}

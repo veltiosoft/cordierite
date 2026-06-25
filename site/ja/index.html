@@ -1,0 +1,94 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Cordierite は Apple Speech と Whisper に対応した macOS 用ローカル音声入力アプリです。">
+  <title>Cordierite - macOS 用ローカル音声入力</title>
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <a class="skip-link" href="#main">本文へ移動</a>
+  <div class="page">
+    <header>
+      <p class="site-label">macOS 用ローカル音声入力</p>
+      <h1>Cordierite</h1>
+      <div class="header-rule" aria-hidden="true"></div>
+      <nav aria-label="主要ナビゲーション">
+        <a href="#download">ダウンロード</a>
+        <a href="#features">基本機能</a>
+        <a href="#security">セキュリティ</a>
+        <a href="#pricing">無料 / Pro</a>
+        <a href="/" hreflang="en">English</a>
+      </nav>
+    </header>
+
+    <main id="main">
+      <p class="intro">話した内容を、Mac のどこにでもきれいなテキストで貼り付ける。</p>
+      <p class="summary">
+        Cordierite は Apple Silicon Mac 向けの音声入力アプリです。
+        ホットキーを押して英語または日本語で話すと、オンデバイスで文字起こしした結果を、今使っているアプリへ貼り付けます。
+      </p>
+
+      <section id="download" aria-labelledby="download-title">
+        <h2 id="download-title">ダウンロード</h2>
+        <p>
+          <a class="download-link" href="https://download.example.com/mac/Cordierite-latest.zip">Cordierite.zip をダウンロード</a>
+        </p>
+        <p class="note">
+          macOS 26 以上の Apple Silicon Mac が必要です。
+          起動後は Permission Doctor からマイク、入力監視、アクセシビリティの権限を有効にしてください。
+        </p>
+      </section>
+
+      <section id="features" aria-labelledby="features-title">
+        <h2 id="features-title">基本機能</h2>
+        <p>無料版だけで、日常の短文音声入力が完結することを前提にしています。</p>
+        <ul>
+          <li>Hold to Talk / Toggle によるホットキー音声入力（既定: Right Option）</li>
+          <li>Apple Speech を既定にし、必要に応じて Whisper モデルをダウンロードして使用可能</li>
+          <li>文字起こし結果を整形してカーソル位置へ貼り付け。可能な場合は文字列クリップボードも復元</li>
+          <li>誤認識されやすい語を登録するユーザー辞書（無料版でも小規模な辞書を予定）</li>
+          <li>前後空白の削除、句読点 spacing の調整、フィラー除去</li>
+          <li>マイク、ホットキー、貼り付けの権限案内（Permission Doctor）</li>
+        </ul>
+      </section>
+
+      <section id="security" aria-labelledby="security-title">
+        <h2 id="security-title">セキュリティ</h2>
+        <p>文字起こし処理はすべてオンデバイスで処理されます。アプリ内にも保存しません。</p>
+      </section>
+
+      <section id="pricing" aria-labelledby="pricing-title">
+        <h2 id="pricing-title">無料 / Pro</h2>
+        <p>基本的な音声入力、Whisper の基本利用、貼り付け、権限案内、セキュリティ修正、バグ修正は Pro 限定にしません。</p>
+
+        <h3>無料</h3>
+        <ul>
+          <li>Apple Speech による音声入力</li>
+          <li>Whisper による基本的なローカル文字起こし</li>
+          <li>Hold to Talk と Toggle</li>
+          <li>英語と日本語の言語選択</li>
+          <li>貼り付けと軽量テキスト整形</li>
+          <li>小規模なユーザー辞書を予定</li>
+        </ul>
+
+        <h3>Pro（予定）</h3>
+        <p class="price">USD 3/month</p>
+        <ul>
+          <li>無制限のユーザー辞書</li>
+          <li>アプリ別、プロジェクト別の辞書</li>
+          <li>辞書の import / export</li>
+          <li>Slack、Email、Markdown、GitHub Issue、Git Commit Message 向け文体プリセット</li>
+          <li>言語、辞書、整形、貼り付け方法を切り替えるアプリ別プロファイル</li>
+          <li>長文入力モード、音声ファイル一括文字起こし</li>
+        </ul>
+      </section>
+    </main>
+
+    <footer>
+      Cordierite — macOS 用ローカル音声入力
+    </footer>
+  </div>
+</body>
+</html>
