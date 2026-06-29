@@ -57,125 +57,68 @@ struct MenuBarView: View {
       appModel.state == .loading || appModel.state == .processing || appModel.state == .starting
         || !appModel.canStartRecognition)
 
-    Menu("Input Mode") {
+    Picker("Input Mode", selection: appModel.configStore.binding(\.inputMode)) {
       ForEach(InputMode.allCases) { mode in
-        Button {
-          appModel.configStore.update { $0.inputMode = mode }
-          appModel.applyInputConfiguration()
-        } label: {
-          if appModel.configStore.configuration.inputMode == mode {
-            Label(mode.label, systemImage: "checkmark")
-          } else {
-            Text(mode.label)
-          }
-        }
+        Text(mode.label).tag(mode)
       }
     }
+    .pickerStyle(.inline)
+    .onChange(of: appModel.configStore.configuration.inputMode) { _, _ in
+      appModel.applyInputConfiguration()
+    }
 
-    Menu("Language") {
-      if appModel.configStore.configuration.recognitionEngine == .whisper {
+    if appModel.configStore.configuration.recognitionEngine == .whisper {
+      Picker("Language", selection: appModel.configStore.binding(\.whisper.language)) {
         ForEach(WhisperLanguageOption.allCases) { language in
-          Button {
-            appModel.configStore.update { $0.whisper.language = language }
-            appModel.applyWhisperLanguageConfiguration()
-          } label: {
-            if appModel.configStore.configuration.whisper.language == language {
-              Label(language.label, systemImage: "checkmark")
-            } else {
-              Text(language.label)
-            }
-          }
+          Text(language.label).tag(language)
         }
-      } else {
+      }
+      .pickerStyle(.inline)
+      .onChange(of: appModel.configStore.configuration.whisper.language) { _, _ in
+        appModel.applyWhisperLanguageConfiguration()
+      }
+    } else {
+      Picker("Language", selection: appModel.configStore.binding(\.language)) {
         ForEach(RecognitionLanguageOption.allCases) { language in
-          Button {
-            appModel.configStore.update { $0.language = language }
-            Task {
-              await appModel.applyLanguageConfiguration()
-            }
-          } label: {
-            if appModel.configStore.configuration.language == language {
-              Label(appModel.languageMenuLabel(for: language), systemImage: "checkmark")
-            } else {
-              Text(appModel.languageMenuLabel(for: language))
-            }
-          }
+          Text(appModel.languageMenuLabel(for: language)).tag(language)
         }
       }
-    }
-
-    Menu("Microphone") {
-      Button {
-        appModel.configStore.update { $0.microphoneDeviceID = nil }
-      } label: {
-        if appModel.configStore.configuration.microphoneDeviceID == nil {
-          Label("System Default", systemImage: "checkmark")
-        } else {
-          Text("System Default")
-        }
-      }
-
-      if !appModel.availableMicrophones.isEmpty {
-        Divider()
-      }
-
-      ForEach(appModel.availableMicrophones) { device in
-        Button {
-          appModel.configStore.update { $0.microphoneDeviceID = device.id }
-        } label: {
-          if appModel.configStore.configuration.microphoneDeviceID == device.id {
-            Label(device.name, systemImage: "checkmark")
-          } else {
-            Text(device.name)
-          }
-        }
-      }
-
-      Divider()
-
-      Button("Reload Devices") {
-        appModel.refreshMicrophoneList()
-      }
-    }
-
-    Menu("Hotkey") {
-      ForEach(HotkeyOption.allCases) { hotkey in
-        Button {
-          appModel.configStore.update { $0.hotkey = hotkey }
-          appModel.applyInputConfiguration()
-        } label: {
-          if appModel.configStore.configuration.hotkey == hotkey {
-            Label(hotkey.label, systemImage: "checkmark")
-          } else {
-            Text(hotkey.label)
-          }
-        }
-      }
-    }
-
-    Menu(appModel.recognitionMenuTitle) {
-      Button {
+      .pickerStyle(.inline)
+      .onChange(of: appModel.configStore.configuration.language) { _, _ in
         Task {
-          await appModel.applyRecognitionSelection(.appleSpeech)
-        }
-      } label: {
-        recognitionOptionLabel(.appleSpeech)
-      }
-
-      if !appModel.availableWhisperModelsForRecognition.isEmpty {
-        Divider()
-
-        ForEach(appModel.availableWhisperModelsForRecognition) { model in
-          Button {
-            Task {
-              await appModel.applyRecognitionSelection(.whisper(model))
-            }
-          } label: {
-            recognitionOptionLabel(.whisper(model))
-          }
+          await appModel.applyLanguageConfiguration()
         }
       }
     }
+
+    Picker("Microphone", selection: microphoneSelection) {
+      Text("System Default").tag(Optional<String>.none)
+      ForEach(appModel.availableMicrophones) { device in
+        Text(device.name).tag(Optional(device.id))
+      }
+    }
+    .pickerStyle(.inline)
+
+    Button("Reload Devices") {
+      appModel.refreshMicrophoneList()
+    }
+
+    Picker("Hotkey", selection: appModel.configStore.binding(\.hotkey)) {
+      ForEach(HotkeyOption.allCases) { hotkey in
+        Text(hotkey.label).tag(hotkey)
+      }
+    }
+    .pickerStyle(.inline)
+    .onChange(of: appModel.configStore.configuration.hotkey) { _, _ in
+      appModel.applyInputConfiguration()
+    }
+
+    Picker(appModel.recognitionMenuTitle, selection: recognitionSelectionBinding) {
+      ForEach(appModel.availableRecognitionSelections) { selection in
+        Text(appModel.recognitionOptionLabel(for: selection)).tag(selection)
+      }
+    }
+    .pickerStyle(.inline)
 
     Menu("Manage Models") {
       ForEach(WhisperModelOption.allCases) { model in
@@ -215,13 +158,24 @@ struct MenuBarView: View {
     .keyboardShortcut("q", modifiers: [.command])
   }
 
-  @ViewBuilder
-  private func recognitionOptionLabel(_ selection: RecognitionSelection) -> some View {
-    if appModel.isRecognitionSelectionActive(selection) {
-      Label(appModel.recognitionOptionLabel(for: selection), systemImage: "checkmark")
-    } else {
-      Text(appModel.recognitionOptionLabel(for: selection))
-    }
+  private var microphoneSelection: Binding<String?> {
+    Binding(
+      get: { appModel.configStore.configuration.microphoneDeviceID },
+      set: { newValue in
+        appModel.configStore.update { $0.microphoneDeviceID = newValue }
+      }
+    )
+  }
+
+  private var recognitionSelectionBinding: Binding<RecognitionSelection> {
+    Binding(
+      get: { appModel.currentRecognitionSelection },
+      set: { newValue in
+        Task {
+          await appModel.applyRecognitionSelection(newValue)
+        }
+      }
+    )
   }
 
   @ViewBuilder
