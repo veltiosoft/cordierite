@@ -143,7 +143,14 @@ final class RecordingController {
       return true
     }
 
-    return (error as? AudioCaptureError) == .noInputReceived
+    switch error as? AudioCaptureError {
+    case .noInputReceived, .engineStartFailed:
+      // `AudioCaptureSession.start` regenerates the AVAudioEngine on every call,
+      // so one retry gives a fresh format read after a stale-format / start failure.
+      return true
+    default:
+      return false
+    }
   }
 
   private func rollbackFailedStart() async {
