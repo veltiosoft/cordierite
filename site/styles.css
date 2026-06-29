@@ -68,11 +68,13 @@ header {
 
 header h1 {
   margin: 0;
-  color: var(--text);
-  font-size: clamp(3rem, 12vw, 7rem);
-  font-weight: 400;
-  letter-spacing: -0.04em;
-  line-height: 0.95;
+  line-height: 0;
+}
+
+.site-logo {
+  display: block;
+  width: min(100%, 36rem);
+  height: auto;
 }
 
 .header-rule {
