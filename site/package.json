@@ -3,7 +3,8 @@
   "private": true,
   "scripts": {
     "dev": "wrangler dev",
-    "deploy": "wrangler deploy"
+    "deploy": "wrangler deploy",
+    "generate-favicons": "node scripts/generate-favicons.mjs"
   },
   "devDependencies": {
     "wrangler": "^4.34.0"
