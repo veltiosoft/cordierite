@@ -1,0 +1,9 @@
+**/node_modules
+**/.DS_Store
+**/.git
+wrangler.jsonc
+package.json
+package-lock.json
+.assetsignore
+cordierite_favicon_pack.zip
+preview.png

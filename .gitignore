@@ -1,4 +1,6 @@
 .DS_Store
+site/node_modules/
+site/.wrangler/
 *.xcuserstate
 xcuserdata/
 DerivedData/
