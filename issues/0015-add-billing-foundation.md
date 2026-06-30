@@ -59,7 +59,7 @@ Low。機能 MVP 完成後の収益化フェーズ。Stripe Dashboard で Produc
 | 更新 | `Cordierite/Cordierite/Settings/SettingsView.swift`（Pro セクション） |
 | 更新 | `Cordierite/Cordierite/Core/AppModel.swift`（AuthManager / SubscriptionManager 保持） |
 | 更新 | Xcode プロジェクト（URL スキーム `cordierite`、Billing ファイル追加） |
-| 更新 | `site/`（`/pro/welcome`, `/auth/verify` 等。Phase 3。**0019** Astro ページ移行完了後） |
+| 更新 | `site/`（`/pro/welcome`, `/auth/verify` 等。Phase 3。**0018** Astro 移行完了後） |
 | 更新 | `README.md`（Stripe test mode・ローカル Worker 開発概要） |
 
 ## 完了条件
