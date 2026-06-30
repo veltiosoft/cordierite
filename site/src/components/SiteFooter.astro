@@ -1,0 +1,30 @@
+---
+import { getPagePath, getUiTranslations, type Locale, type PageKey } from '../i18n';
+
+interface Props {
+  locale: Locale;
+  pageKey: PageKey;
+}
+
+const { locale, pageKey } = Astro.props;
+const ui = getUiTranslations(locale);
+const privacyPath = getPagePath('privacy', locale);
+const termsPath = getPagePath('terms', locale);
+const alternatePath = getPagePath(pageKey, locale === 'en' ? 'ja' : 'en');
+---
+
+<footer class="site-footer">
+  <p class="footer-tagline">{ui.footer.tagline}</p>
+  <nav class="footer-nav" aria-label={ui.footer.ariaLabel}>
+    <a href={privacyPath}>{ui.footer.privacy}</a>
+    <a href={termsPath}>{ui.footer.terms}</a>
+    <a href="mailto:contact@veltiosoft.com">{ui.footer.contact}</a>
+    <a href="https://veltiosoft.com/" rel="noopener noreferrer">{ui.footer.veltiosoft}</a>
+  </nav>
+  <p class="footer-meta">{ui.footer.copyright}</p>
+  <p class="footer-lang">
+    <a href={alternatePath} lang={ui.footer.languageSwitchLang} hreflang={ui.footer.languageSwitchHreflang}>
+      {ui.footer.languageSwitch}
+    </a>
+  </p>
+</footer>

@@ -1,0 +1,45 @@
+---
+import { SITE_URL, getOgLocale, getOgLocaleAlternate, type Locale } from '../i18n';
+
+interface Props {
+  locale: Locale;
+  title: string;
+  description: string;
+  path: string;
+  alternatePath: string;
+}
+
+const { locale, title, description, path, alternatePath } = Astro.props;
+const canonicalUrl = new URL(path, SITE_URL).href;
+const alternateUrl = new URL(alternatePath, SITE_URL).href;
+const ogTitle = title;
+---
+
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="description" content={description} />
+<meta property="og:type" content="website" />
+<meta property="og:site_name" content="Cordierite" />
+<meta property="og:title" content={ogTitle} />
+<meta property="og:description" content={description} />
+<meta property="og:url" content={canonicalUrl} />
+<meta property="og:locale" content={getOgLocale(locale)} />
+<meta property="og:locale:alternate" content={getOgLocaleAlternate(locale)} />
+<meta property="og:image" content={`${SITE_URL}/og-image.png`} />
+<meta property="og:image:width" content="1200" />
+<meta property="og:image:height" content="630" />
+<meta property="og:image:alt" content="Cordierite" />
+<meta name="twitter:card" content="summary_large_image" />
+<meta name="twitter:title" content={ogTitle} />
+<meta name="twitter:description" content={description} />
+<meta name="twitter:image" content={`${SITE_URL}/og-image.png`} />
+<title>{title}</title>
+<link rel="canonical" href={canonicalUrl} />
+<link rel="alternate" hreflang={locale === 'en' ? 'en' : 'ja'} href={canonicalUrl} />
+<link rel="alternate" hreflang={locale === 'en' ? 'ja' : 'en'} href={alternateUrl} />
+<link rel="icon" href="/favicon.ico" sizes="any" />
+<link rel="icon" href="/favicon-32x32.png" type="image/png" sizes="32x32" />
+<link rel="icon" href="/favicon-16x16.png" type="image/png" sizes="16x16" />
+<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+<link rel="manifest" href="/site.webmanifest" />
+<meta name="theme-color" content="#05083D" />

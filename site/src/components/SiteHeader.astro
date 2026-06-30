@@ -1,0 +1,69 @@
+---
+import {
+  getAlternatePagePath,
+  getHomePath,
+  getUiTranslations,
+  type Locale,
+  type PageKey,
+} from '../i18n';
+
+interface Props {
+  locale: Locale;
+  variant: 'landing' | 'legal';
+  pageKey: PageKey;
+  siteLabel?: string;
+}
+
+const { locale, variant, pageKey, siteLabel } = Astro.props;
+const ui = getUiTranslations(locale);
+const homePath = getHomePath(locale);
+const alternatePath = getAlternatePagePath(pageKey, locale);
+---
+
+<header>
+  {
+    variant === 'legal' ? (
+      <p class="site-label">
+        <a href={homePath}>Cordierite</a>
+      </p>
+    ) : (
+      <p class="site-label">{siteLabel}</p>
+    )
+  }
+  <h1>
+    {
+      variant === 'legal' ? (
+        <a href={homePath}>
+          <img
+            class="site-logo"
+            src="/cordierite-logo.svg"
+            alt="Cordierite"
+            width="295"
+            height="48"
+          />
+        </a>
+      ) : (
+        <img class="site-logo" src="/cordierite-logo.svg" alt="Cordierite" width="295" height="48" />
+      )
+    }
+  </h1>
+  <div class="header-rule" aria-hidden="true"></div>
+  <nav aria-label={ui.nav.ariaLabel}>
+    {
+      variant === 'landing' && (
+        <>
+          <a href="#features">{ui.nav.features}</a>
+          <a href="#security">{ui.nav.security}</a>
+          <a href="#pricing">{ui.nav.pricing}</a>
+        </>
+      )
+    }
+    <a
+      href={alternatePath}
+      lang={ui.nav.languageSwitchLang}
+      hreflang={ui.nav.languageSwitchHreflang}
+    >
+      {ui.nav.languageSwitch}
+    </a>
+  </nav>
+</header>

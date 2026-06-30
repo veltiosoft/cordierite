@@ -3,7 +3,7 @@
   "name": "cordierite-site",
   "compatibility_date": "2026-06-29",
   "assets": {
-    "directory": ".",
+    "directory": "./dist",
     "html_handling": "auto-trailing-slash"
   },
   "routes": [

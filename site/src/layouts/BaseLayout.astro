@@ -1,0 +1,35 @@
+---
+import '../styles/global.css';
+import SiteMeta from '../components/SiteMeta.astro';
+import type { Locale } from '../i18n';
+
+interface Props {
+  locale: Locale;
+  title: string;
+  description: string;
+  path: string;
+  alternatePath: string;
+}
+
+const { locale, title, description, path, alternatePath } = Astro.props;
+---
+
+<!doctype html>
+<html lang={locale}>
+  <head>
+    <SiteMeta
+      locale={locale}
+      title={title}
+      description={description}
+      path={path}
+      alternatePath={alternatePath}
+    />
+  </head>
+  <body>
+    <slot name="skip-link" />
+    <div class="page">
+      <slot name="header" />
+      <slot />
+    </div>
+  </body>
+</html>

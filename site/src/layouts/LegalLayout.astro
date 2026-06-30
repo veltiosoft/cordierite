@@ -1,0 +1,40 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import SiteFooter from '../components/SiteFooter.astro';
+import {
+  formatLegalUpdatedDate,
+  getAlternatePagePath,
+  getPagePath,
+  getUiTranslations,
+  type Locale,
+  type PageKey,
+} from '../i18n';
+
+interface Props {
+  locale: Locale;
+  pageKey: Extract<PageKey, 'privacy' | 'terms'>;
+  title: string;
+  description: string;
+  updated: Date;
+}
+
+const { locale, pageKey, title, description, updated } = Astro.props;
+const ui = getUiTranslations(locale);
+const path = getPagePath(pageKey, locale);
+const alternatePath = getAlternatePagePath(pageKey, locale);
+---
+
+<BaseLayout locale={locale} title={title} description={description} path={path} alternatePath={alternatePath}>
+  <a slot="skip-link" class="skip-link" href="#main">{ui.skipLink}</a>
+  <SiteHeader slot="header" locale={locale} variant="legal" pageKey={pageKey} />
+  <main id="main">
+    <p class="legal-updated">
+      {ui.legal.lastUpdatedPrefix} {formatLegalUpdatedDate(updated, locale)}
+    </p>
+    <article class="legal-content">
+      <slot />
+    </article>
+  </main>
+  <SiteFooter locale={locale} pageKey={pageKey} />
+</BaseLayout>

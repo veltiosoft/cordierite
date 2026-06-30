@@ -1,0 +1,55 @@
+---
+import { getLandingTranslations, type Locale } from '../i18n';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const t = getLandingTranslations(locale);
+---
+
+<main id="main">
+  <p class="intro">{t.intro}</p>
+  <p class="summary">{t.summary}</p>
+
+  <section id="download" aria-labelledby="download-title">
+    <h2 id="download-title">{t.download.title}</h2>
+    <p class="note">{t.download.note}</p>
+  </section>
+
+  <section id="features" aria-labelledby="features-title">
+    <h2 id="features-title">{t.features.title}</h2>
+    <p>{t.features.intro}</p>
+    <ul>
+      {t.features.items.map((item) => (
+        <li>{item}</li>
+      ))}
+    </ul>
+  </section>
+
+  <section id="security" aria-labelledby="security-title">
+    <h2 id="security-title">{t.security.title}</h2>
+    <p>{t.security.body}</p>
+  </section>
+
+  <section id="pricing" aria-labelledby="pricing-title">
+    <h2 id="pricing-title">{t.pricing.title}</h2>
+    <p>{t.pricing.intro}</p>
+
+    <h3>{t.pricing.free.title}</h3>
+    <ul>
+      {t.pricing.free.items.map((item) => (
+        <li>{item}</li>
+      ))}
+    </ul>
+
+    <h3>{t.pricing.pro.title}</h3>
+    <p class="price">{t.pricing.pro.price}</p>
+    <ul>
+      {t.pricing.pro.items.map((item) => (
+        <li>{item}</li>
+      ))}
+    </ul>
+  </section>
+</main>

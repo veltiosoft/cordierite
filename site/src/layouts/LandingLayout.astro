@@ -1,0 +1,33 @@
+---
+import BaseLayout from './BaseLayout.astro';
+import SiteHeader from '../components/SiteHeader.astro';
+import SiteFooter from '../components/SiteFooter.astro';
+import { getLandingTranslations, getUiTranslations, type Locale } from '../i18n';
+
+interface Props {
+  locale: Locale;
+}
+
+const { locale } = Astro.props;
+const landing = getLandingTranslations(locale);
+const ui = getUiTranslations(locale);
+---
+
+<BaseLayout
+  locale={locale}
+  title={landing.meta.title}
+  description={landing.meta.description}
+  path={locale === 'en' ? '/' : '/ja/'}
+  alternatePath={locale === 'en' ? '/ja/' : '/'}
+>
+  <a slot="skip-link" class="skip-link" href="#main">{ui.skipLink}</a>
+  <SiteHeader
+    slot="header"
+    locale={locale}
+    variant="landing"
+    pageKey="home"
+    siteLabel={landing.siteLabel}
+  />
+  <slot />
+  <SiteFooter locale={locale} pageKey="home" />
+</BaseLayout>
