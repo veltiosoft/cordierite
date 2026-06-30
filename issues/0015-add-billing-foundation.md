@@ -12,7 +12,7 @@
 
 仕様書 Pro 機能（辞書拡張・プロファイル・長文モード等）を提供するため、**Stripe サブスクリプション**と**マジックリンク認証**による entitlement 管理、および Feature gate 基盤を整える。
 
-詳細設計: [docs/billing-design.md](../docs/billing-design.md)
+詳細設計: [docs/billing-design.md](../docs/billing-design.md)（[アカウント登録戦略](../docs/billing-design.md#アカウント登録戦略) 節）
 
 ## 優先度根拠
 

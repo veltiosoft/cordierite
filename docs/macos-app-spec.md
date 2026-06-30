@@ -157,10 +157,13 @@ MVP では課金処理を実装しない。Pro 提供開始時は次の方針と
 | 配布 | Developer ID 直接配布（自社サイトから ZIP / DMG）。Mac App Store / StoreKit は採用しない |
 | 決済 | Stripe Billing（USD 5/month、Checkout + Customer Portal + Webhooks） |
 | 認証 | マジックリンク主軸（パスワードなし、ライセンスキーは使わない） |
+| アカウント登録 | **独立した Sign up は設けない**。Checkout のメール入力がアカウント作成。復元は Restore Pro → マジックリンク |
 | entitlement | Cloudflare Workers + D1 で管理。アプリは API + Keychain cache で Pro 判定 |
 | デバイス数 | 制限しない（同一購読で複数 Mac を許可） |
 
-詳細設計は [docs/billing-design.md](billing-design.md)。実装は [issues/0015-add-billing-foundation.md](../issues/0015-add-billing-foundation.md) を参照。
+無料版ユーザーはアカウントを意識しない。Pro 機能利用時または Settings の Pro セクションでのみログインを案内する。
+
+詳細設計は [docs/billing-design.md](billing-design.md)（[アカウント登録戦略](billing-design.md#アカウント登録戦略) 節を含む）。実装は [issues/0015-add-billing-foundation.md](../issues/0015-add-billing-foundation.md) を参照。
 
 ## ユーザー体験
 
