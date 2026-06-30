@@ -1,7 +1,7 @@
 # Cordierite macOS アプリ仕様書
 
 作成日：2026-06-21
-最終更新：2026-06-23
+最終更新：2026-06-30
 
 ## 目的
 
@@ -147,6 +147,20 @@ Pro プランでは次を提供する。
 
 無料版の体験を意図的に不便にして Pro へ誘導しない。
 Pro は制限解除ではなく、入力結果を安定させるための追加機能として設計する。
+
+### 課金・配布の実装方針（MVP 後）
+
+MVP では課金処理を実装しない。Pro 提供開始時は次の方針とする。
+
+| 項目 | 方針 |
+|---|---|
+| 配布 | Developer ID 直接配布（自社サイトから ZIP / DMG）。Mac App Store / StoreKit は採用しない |
+| 決済 | Stripe Billing（USD 5/month、Checkout + Customer Portal + Webhooks） |
+| 認証 | マジックリンク主軸（パスワードなし、ライセンスキーは使わない） |
+| entitlement | Cloudflare Workers + D1 で管理。アプリは API + Keychain cache で Pro 判定 |
+| デバイス数 | 制限しない（同一購読で複数 Mac を許可） |
+
+詳細設計は [docs/billing-design.md](billing-design.md)。実装は [issues/0015-add-billing-foundation.md](../issues/0015-add-billing-foundation.md) を参照。
 
 ## ユーザー体験
 

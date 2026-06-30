@@ -59,6 +59,6 @@ Low。収益化・差別化機能であり、現 MVP には必須ではない。
 
 ## スコープ外
 
-- StoreKit 課金（0015）
+- Stripe 課金基盤（0015。`docs/billing-design.md` 参照）
 - プロファイル自動切替の本実装
 - LLM 整形
