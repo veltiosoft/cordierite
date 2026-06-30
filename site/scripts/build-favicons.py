@@ -1,61 +1,67 @@
 #!/usr/bin/env python3
-"""Build opaque favicon PNG/ICO/SVG assets."""
+"""Build opaque favicon PNG/ICO/SVG assets from favicon-mark.svg."""
 
 from __future__ import annotations
 
 import struct
+import subprocess
 import sys
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image
 
 BRAND = "#05083D"
 BRAND_LIGHT = "#f4f1ea"
 TEXT = "#16140f"
 WHITE = "#FFFFFF"
 CANVAS = 512
-
-FONT_CANDIDATES = [
-    "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf",
-    "/usr/share/fonts/truetype/liberation/LiberationSans-Bold.ttf",
-    "/usr/share/fonts/truetype/freefont/FreeSansBold.ttf",
-]
+MARK_INSET = 72
 
 
-def load_font(size: int) -> ImageFont.FreeTypeFont | ImageFont.ImageFont:
-    for path in FONT_CANDIDATES:
-        if Path(path).exists():
-            return ImageFont.truetype(path, size)
-    return ImageFont.load_default()
+def render_mark(site_dir: Path, foreground: str, width: int) -> Image.Image:
+    script = site_dir / "scripts" / "render-mark.mjs"
+    mark = site_dir / "favicon-mark.svg"
+    result = subprocess.run(
+        ["node", str(script), str(mark), str(width), foreground],
+        check=True,
+        capture_output=True,
+    )
+    from io import BytesIO
+
+    return Image.open(BytesIO(result.stdout)).convert("RGBA")
 
 
-def render_favicon(size: int, background: str, foreground: str) -> Image.Image:
-    image = Image.new("RGBA", (size, size), background)
-    draw = ImageDraw.Draw(image)
-    font = load_font(max(8, int(size * 0.78)))
-    text = "C"
-    bbox = draw.textbbox((0, 0), text, font=font)
-    text_width = bbox[2] - bbox[0]
-    text_height = bbox[3] - bbox[1]
-    x = (size - text_width) / 2 - bbox[0]
-    y = (size - text_height) / 2 - bbox[1] - size * 0.04
-    draw.text((x, y), text, fill=foreground, font=font)
-    return image
+def composite(background: str, mark: Image.Image) -> Image.Image:
+    canvas = Image.new("RGBA", (CANVAS, CANVAS), background)
+    mark_size = CANVAS - MARK_INSET * 2
+    mark = mark.resize((mark_size, mark_size), Image.Resampling.LANCZOS)
+    canvas.paste(mark, (MARK_INSET, MARK_INSET), mark)
+    return canvas
 
 
-def write_svg(path: Path, background: str, foreground: str) -> None:
+def write_svg(path: Path, background: str, foreground: str, mark_svg: str) -> None:
+    import re
+
+    viewbox = re.search(r'viewBox="([^"]+)"', mark_svg)
+    if not viewbox:
+        raise ValueError("favicon-mark.svg is missing a viewBox")
+    vb = viewbox.group(1)
+    vb_parts = [float(v) for v in vb.split()]
+    mark_width = vb_parts[2]
+
+    inner = mark_svg.split("<svg", 1)[1]
+    inner = inner.split(">", 1)[1]
+    inner = inner.rsplit("</svg>", 1)[0].strip()
+
     path.write_text(
         f'''<?xml version="1.0" encoding="UTF-8"?>
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {CANVAS} {CANVAS}">
   <rect width="{CANVAS}" height="{CANVAS}" fill="{background}"/>
-  <text
-    x="256"
-    y="340"
-    text-anchor="middle"
-    font-family="system-ui, -apple-system, BlinkMacSystemFont, sans-serif"
-    font-size="348"
-    font-weight="700"
-    fill="{foreground}">C</text>
+  <g transform="translate({MARK_INSET} {MARK_INSET}) scale({(CANVAS - MARK_INSET * 2) / mark_width})">
+    <svg viewBox="{vb}">
+      {inner.replace('fill="currentColor"', f'fill="{foreground}"')}
+    </svg>
+  </g>
 </svg>
 ''',
         encoding="utf-8",
@@ -69,11 +75,19 @@ def encode_ico(png_path: Path, ico_path: Path) -> None:
     ico_path.write_bytes(header + entry + png_buffer)
 
 
+def count_foreground_pixels(image: Image.Image) -> int:
+    return sum(1 for r, g, b, a in image.getdata() if a > 128 and (r > 180 or g > 180))
+
+
 def main() -> int:
     site_dir = Path(sys.argv[1])
+    mark_svg = (site_dir / "favicon-mark.svg").read_text(encoding="utf-8")
 
-    write_svg(site_dir / "favicon.svg", BRAND, WHITE)
-    write_svg(site_dir / "favicon-light.svg", BRAND_LIGHT, TEXT)
+    dark_canvas = composite(BRAND, render_mark(site_dir, WHITE, 368))
+    light_canvas = composite(BRAND_LIGHT, render_mark(site_dir, TEXT, 368))
+
+    write_svg(site_dir / "favicon.svg", BRAND, WHITE, mark_svg)
+    write_svg(site_dir / "favicon-light.svg", BRAND_LIGHT, TEXT, mark_svg)
 
     png_targets = {
         "favicon-16x16.png": 16,
@@ -91,16 +105,16 @@ def main() -> int:
     }
 
     for name, size in png_targets.items():
-        render_favicon(size, BRAND, WHITE).save(site_dir / name)
+        dark_canvas.resize((size, size), Image.Resampling.LANCZOS).save(site_dir / name)
 
-    render_favicon(32, BRAND_LIGHT, TEXT).save(site_dir / "favicon-light-32x32.png")
+    light_canvas.resize((32, 32), Image.Resampling.LANCZOS).save(site_dir / "favicon-light-32x32.png")
     encode_ico(site_dir / "favicon-16x16.png", site_dir / "favicon.ico")
 
-    sample = render_favicon(32, BRAND, WHITE)
-    white = sum(1 for px in sample.getdata() if px[0] > 200)
-    if white < 20:
-        raise SystemExit("generated favicon mark is too small")
-    print(f"built favicons (32px mark has {white} foreground pixels)")
+    sample = dark_canvas.resize((32, 32), Image.Resampling.LANCZOS)
+    foreground = count_foreground_pixels(sample)
+    if foreground < 20:
+        raise SystemExit(f"generated favicon mark is too small ({foreground} px)")
+    print(f"built favicons with logo o mark (32px has {foreground} foreground pixels)")
     return 0
 
 
