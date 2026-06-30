@@ -263,7 +263,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Cordierite;
 				INFOPLIST_KEY_LSUIElement = YES;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "\U00a9 2026 Veltiosoft Inc.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Cordierite uses the microphone to transcribe your speech into text.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
@@ -299,7 +299,7 @@
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Cordierite;
 				INFOPLIST_KEY_LSUIElement = YES;
-				INFOPLIST_KEY_NSHumanReadableCopyright = "";
+				INFOPLIST_KEY_NSHumanReadableCopyright = "\U00a9 2026 Veltiosoft Inc.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Cordierite uses the microphone to transcribe your speech into text.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",

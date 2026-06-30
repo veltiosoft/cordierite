@@ -6,4 +6,5 @@ package.json
 package-lock.json
 .assetsignore
 cordierite_favicon_pack.zip
+**/_includes
 preview.png
