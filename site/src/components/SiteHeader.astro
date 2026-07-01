@@ -30,9 +30,9 @@ const alternatePath = getAlternatePagePath(pageKey, locale);
       <p class="site-label">{siteLabel}</p>
     )
   }
-  <h1>
-    {
-      variant === 'legal' ? (
+  {
+    variant === 'legal' ? (
+      <p class="site-logo-heading">
         <a href={homePath}>
           <img
             class="site-logo"
@@ -42,11 +42,13 @@ const alternatePath = getAlternatePagePath(pageKey, locale);
             height="48"
           />
         </a>
-      ) : (
+      </p>
+    ) : (
+      <h1>
         <img class="site-logo" src="/cordierite-logo.svg" alt="Cordierite" width="295" height="48" />
-      )
-    }
-  </h1>
+      </h1>
+    )
+  }
   <div class="header-rule" aria-hidden="true"></div>
   <nav aria-label={ui.nav.ariaLabel}>
     {

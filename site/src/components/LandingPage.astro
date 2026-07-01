@@ -1,5 +1,5 @@
 ---
-import { getLandingTranslations, type Locale } from '../i18n';
+import { getLandingTranslations, getPagePath, type Locale } from '../i18n';
 
 interface Props {
   locale: Locale;
@@ -7,6 +7,8 @@ interface Props {
 
 const { locale } = Astro.props;
 const t = getLandingTranslations(locale);
+const termsPath = getPagePath('terms', locale);
+const privacyPath = getPagePath('privacy', locale);
 ---
 
 <main id="main">
@@ -16,6 +18,13 @@ const t = getLandingTranslations(locale);
   <section id="download" aria-labelledby="download-title">
     <h2 id="download-title">{t.download.title}</h2>
     <p class="note">{t.download.note}</p>
+    <p class="note">
+      {t.download.legal.prefix}
+      <a href={termsPath}>{t.download.legal.terms}</a>
+      {t.download.legal.middle}
+      <a href={privacyPath}>{t.download.legal.privacy}</a>
+      {t.download.legal.suffix}
+    </p>
   </section>
 
   <section id="features" aria-labelledby="features-title">

@@ -66,8 +66,10 @@ header {
   font-size: 1.125rem;
 }
 
-header h1 {
+header h1,
+.site-logo-heading {
   margin: 0;
+  max-width: none;
   line-height: 0;
 }
 

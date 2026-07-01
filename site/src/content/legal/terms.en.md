@@ -39,19 +39,19 @@ Speech recognition results may contain errors. You are responsible for reviewing
 
 ## Disclaimer
 
-Cordierite is provided "as is" and "as available". To the maximum extent permitted by law, Veltiosoft disclaims all warranties, whether express or implied, including warranties of merchantability, fitness for a particular purpose, and non-infringement. We do not guarantee uninterrupted operation, error-free transcription, compatibility with every app or macOS version, or that Cordierite will meet your requirements.
+Cordierite is provided "as is" and "as available". To the maximum extent permitted by law, Veltiosoft disclaims all warranties, whether express or implied, including warranties of merchantability, fitness for a particular purpose, and non-infringement. Nothing in these Terms excludes warranties or liabilities that cannot be excluded under applicable law. We do not guarantee uninterrupted operation, error-free transcription, compatibility with every app or macOS version, or that Cordierite will meet your requirements.
 
 ## Limitation of liability
 
-To the maximum extent permitted by law, Veltiosoft will not be liable for any indirect, incidental, special, consequential, or punitive damages, or for loss of profits, data, goodwill, or business interruption arising from your use of Cordierite. Our total liability for any claim relating to Cordierite will not exceed the amount you paid us for Cordierite in the twelve months before the claim, or USD 100 if you have not paid us.
+To the maximum extent permitted by law, Veltiosoft will not be liable for any indirect, incidental, special, consequential, or punitive damages, or for loss of profits, data, goodwill, or business interruption arising from your use of Cordierite. Our total liability for any claim relating to Cordierite will not exceed the amount you paid us for Cordierite in the twelve months before the claim, or USD 100 if you have not paid us. This section does not apply to damages caused by our willful misconduct or gross negligence, or to any liability that cannot be limited under consumer protection laws or other applicable laws.
 
 ## Pro plan (planned)
 
-Cordierite may offer an optional paid tier called Pro in the future. Pro is planned but not available yet. Paid features, pricing, billing terms, and cancellation rules will be disclosed separately before they become available. At present, subscription billing is not offered through Cordierite.
+Cordierite may offer an optional paid tier called Pro in the future. Pro is planned but not available yet. Any Pro prices or features shown on this website are planned only and may change before launch. Paid features, final pricing, billing terms, cancellation rules, and refund policies will be disclosed separately before they become available. At present, subscription billing is not offered through Cordierite.
 
 ## Changes to Cordierite or these Terms
 
-We may update Cordierite or these Terms from time to time. When we change these Terms, we will revise the "Last updated" date above. Your continued use of Cordierite after changes become effective constitutes acceptance of the revised Terms, except where applicable law requires otherwise.
+We may update Cordierite or these Terms from time to time. When we change these Terms, we will revise the "Last updated" date above. For material changes, we will provide notice before the effective date through this website, in-app notice, or another reasonable method. This does not apply when immediate changes are required for legal, security, or operational reasons. Your continued use of Cordierite after changes become effective constitutes acceptance of the revised Terms, except where applicable law requires otherwise.
 
 ## Termination
 

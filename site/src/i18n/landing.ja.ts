@@ -12,6 +12,13 @@ export const landingJa = {
   download: {
     title: 'ダウンロード',
     note: 'macOS 26 以上の Apple Silicon Mac が必要です。起動後は Permission Doctor からマイク、入力監視、アクセシビリティの権限を有効にしてください。',
+    legal: {
+      prefix: 'ダウンロードまたは利用により、',
+      terms: '利用規約',
+      middle: 'および',
+      privacy: 'プライバシーポリシー',
+      suffix: 'に同意したものとみなされます。',
+    },
   },
   features: {
     title: '基本機能',
@@ -46,7 +53,7 @@ export const landingJa = {
     },
     pro: {
       title: 'Pro（予定）',
-      price: 'USD 3/month',
+      price: '予定価格: USD 3/month',
       items: [
         '無制限のユーザー辞書',
         'アプリ別、プロジェクト別の辞書',

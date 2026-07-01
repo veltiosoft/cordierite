@@ -12,6 +12,13 @@ export const landingEn = {
   download: {
     title: 'Download',
     note: 'Requires macOS 26 or later on Apple Silicon. After opening the app, use Permission Doctor to enable Microphone, Input Monitoring, and Accessibility permissions.',
+    legal: {
+      prefix: 'By downloading or using Cordierite, you agree to the ',
+      terms: 'Terms of Use',
+      middle: ' and acknowledge the ',
+      privacy: 'Privacy Policy',
+      suffix: '.',
+    },
   },
   features: {
     title: 'Basic features',
@@ -46,7 +53,7 @@ export const landingEn = {
     },
     pro: {
       title: 'Pro (planned)',
-      price: 'USD 3/month',
+      price: 'Planned price: USD 3/month',
       items: [
         'Unlimited user dictionary',
         'App-specific and project-specific dictionaries',
