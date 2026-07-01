@@ -44,7 +44,7 @@ SOFTWARE.
 ## OpenAI Whisper model weights
 
 - [OpenAI Whisper](https://github.com/openai/whisper)
-- [Hugging Face (optional model downloads)](https://huggingface.co/ggerganov/whisper.cpp)
+- [ggerganov/whisper.cpp (Hugging Face, optional model downloads)](https://huggingface.co/ggerganov/whisper.cpp/tree/main)
 
 Copyright (c) 2022 OpenAI
 
