@@ -16,7 +16,7 @@ Copyright (c) 2023-2026 The ggml authors
 
 Licensed under the MIT License.
 
-Includes the ggml library. Cordierite ships whisper.cpp v1.7.5 as WhisperCppBridge.
+Includes the ggml library. Cordierite ships whisper.cpp as WhisperCppBridge.
 
 ```
 Permission is hereby granted, free of charge, to any person obtaining a copy
