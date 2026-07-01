@@ -12,11 +12,14 @@ Cordierite は次の第三者オープンソースソフトウェアを利用し
 
 ## whisper.cpp
 
+- [whisper.cpp](https://github.com/ggml-org/whisper.cpp)
+- [ggml](https://github.com/ggml-org/ggml)
+
 Copyright (c) 2023-2026 The ggml authors
 
 Licensed under the MIT License.
 
-Includes the ggml library. Cordierite ships whisper.cpp as WhisperCppBridge.
+Includes the ggml library.
 
 ```
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -40,11 +43,14 @@ SOFTWARE.
 
 ## OpenAI Whisper model weights
 
+- [OpenAI Whisper](https://github.com/openai/whisper)
+- [Hugging Face (optional model downloads)](https://huggingface.co/ggerganov/whisper.cpp)
+
 Copyright (c) 2022 OpenAI
 
 Licensed under the MIT License.
 
-Optional Whisper models are downloaded separately from Hugging Face ([ggerganov/whisper.cpp](https://huggingface.co/ggerganov/whisper.cpp)).
+Optional Whisper models are downloaded separately from Hugging Face.
 
 ```
 Permission is hereby granted, free of charge, to any person obtaining a copy

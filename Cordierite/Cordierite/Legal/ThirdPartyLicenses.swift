@@ -37,7 +37,7 @@ enum ThirdPartyLicenses {
       copyright: "Copyright (c) 2023-2026 The ggml authors",
       licenseName: "MIT License",
       licenseText: mitLicenseText,
-      notice: "Includes the ggml library. Cordierite ships whisper.cpp as WhisperCppBridge."
+      notice: "Includes the ggml library. Cordierite ships whisper.cpp v1.7.5 as WhisperCppBridge."
     ),
     ThirdPartyComponent(
       id: "openai-whisper",
