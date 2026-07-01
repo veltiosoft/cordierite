@@ -2,6 +2,9 @@
   "$schema": "./node_modules/wrangler/config-schema.json",
   "name": "cordierite-site",
   "compatibility_date": "2026-06-29",
+  // workers.dev は使わずカスタムドメインのみ。PR プレビュー用に明示的に有効化する
+  // （未設定だと preview_urls = workers_dev となり、デプロイのたびに off に戻る）
+  "preview_urls": true,
   "assets": {
     "directory": "./dist",
     "html_handling": "auto-trailing-slash"

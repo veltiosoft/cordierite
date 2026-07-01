@@ -58,6 +58,13 @@ xcodebuild \
   test
 ```
 
+## 製品サイト (`site/`)
+
+製品 LP は [`site/`](site/) 配下の静的 HTML。本番デプロイは Cloudflare **Workers Builds** が `main` への push（`site/` 変更時）で自動実行する。
+
+- Coding Agent は **`npm run deploy` および `wrangler deploy` を実行しない**（手動デプロイも行わない）
+- ローカル確認のみ `cd site && npm run dev`（`wrangler dev`）を使う
+
 ## Git 運用
 
 - 既定ブランチ: `main`
