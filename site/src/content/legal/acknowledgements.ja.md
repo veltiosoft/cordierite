@@ -65,7 +65,3 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
-
-## Apple Speech
-
-Apple Speech は Apple の Speech フレームワークおよび macOS が提供するオンデバイスアセットを利用します。オープンソースではなく、上記ライセンスの対象外です。

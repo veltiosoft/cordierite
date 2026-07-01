@@ -65,7 +65,3 @@ LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
 OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
-
-## Apple Speech
-
-Apple Speech uses Apple's Speech framework and on-device assets provided by macOS. It is not open-source software and is not covered by the licenses above.

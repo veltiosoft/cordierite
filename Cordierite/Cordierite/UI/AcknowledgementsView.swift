@@ -16,16 +16,6 @@ struct AcknowledgementsView: View {
         ForEach(ThirdPartyLicenses.components) { component in
           componentSection(component)
         }
-
-        Text(
-          """
-          Apple Speech uses Apple's Speech framework and on-device assets provided by macOS. \
-          It is not open-source software and is not covered by the licenses above.
-          """
-        )
-        .font(.caption)
-        .foregroundStyle(.secondary)
-        .fixedSize(horizontal: false, vertical: true)
       }
       .frame(maxWidth: .infinity, alignment: .leading)
       .padding(24)
