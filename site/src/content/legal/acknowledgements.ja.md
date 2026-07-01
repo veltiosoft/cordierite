@@ -1,22 +1,22 @@
 ---
-title: 謝辞（オープンソース）
+title: 謝辞
 description: "Cordierite（macOS 用ローカル音声入力アプリ）が利用するオープンソースソフトウェアの謝辞。運営: Veltiosoft株式会社。"
 updated: 2026-07-01
 locale: ja
 document: acknowledgements
 ---
 
-# 謝辞（オープンソース）
+# 謝辞
 
-Cordierite は次の第三者オープンソースソフトウェアを利用しています。以下の MIT ライセンスは、列挙したコンポーネントにのみ適用され、Cordierite 全体には適用されません。
+Cordierite は次の第三者オープンソースソフトウェアを利用しています。以下の MIT License は、列挙したコンポーネントにのみ適用され、Cordierite 全体には適用されません。
 
 ## whisper.cpp
 
 Copyright (c) 2023-2026 The ggml authors
 
-MIT License の下で提供されています。
+Licensed under the MIT License.
 
-ggml ライブラリを含みます。Cordierite は whisper.cpp v1.7.5 を WhisperCppBridge として同梱しています。
+Includes the ggml library. Cordierite ships whisper.cpp v1.7.5 as WhisperCppBridge.
 
 ```
 Permission is hereby granted, free of charge, to any person obtaining a copy
@@ -38,13 +38,13 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
 ```
 
-## OpenAI Whisper モデル重み
+## OpenAI Whisper model weights
 
 Copyright (c) 2022 OpenAI
 
-MIT License の下で提供されています。
+Licensed under the MIT License.
 
-Whisper モデルは任意で、Hugging Face（[ggerganov/whisper.cpp](https://huggingface.co/ggerganov/whisper.cpp)）から個別にダウンロードします。
+Optional Whisper models are downloaded separately from Hugging Face ([ggerganov/whisper.cpp](https://huggingface.co/ggerganov/whisper.cpp)).
 
 ```
 Permission is hereby granted, free of charge, to any person obtaining a copy
