@@ -1,0 +1,17 @@
+---
+import LegalLayout from '../../../layouts/LegalLayout.astro';
+import { getLegalPage } from '../../../lib/legal';
+
+const { entry, Content } = await getLegalPage('acknowledgements', 'ja');
+const { title, description, updated } = entry.data;
+---
+
+<LegalLayout
+  locale="ja"
+  pageKey="acknowledgements"
+  title={`${title} - Cordierite`}
+  description={description}
+  updated={updated}
+>
+  <Content />
+</LegalLayout>

@@ -9,7 +9,7 @@ const legal = defineCollection({
     description: z.string(),
     updated: z.coerce.date(),
     locale: z.enum(['en', 'ja']),
-    document: z.enum(['privacy', 'terms']),
+    document: z.enum(['privacy', 'terms', 'acknowledgements']),
   }),
 });
 

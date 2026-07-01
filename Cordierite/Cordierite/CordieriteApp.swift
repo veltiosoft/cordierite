@@ -26,5 +26,10 @@ struct CordieriteApp: App {
         .environment(appModel)
     }
     .defaultSize(width: 520, height: 440)
+
+    Window("Acknowledgements", id: "acknowledgements") {
+      AcknowledgementsView()
+    }
+    .defaultSize(width: 560, height: 480)
   }
 }

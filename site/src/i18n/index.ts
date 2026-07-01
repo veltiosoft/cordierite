@@ -7,7 +7,7 @@ export const SITE_URL = 'https://cordierite.veltiosoft.com';
 
 export type Locale = 'en' | 'ja';
 
-export type PageKey = 'home' | 'privacy' | 'terms';
+export type PageKey = 'home' | 'privacy' | 'terms' | 'acknowledgements';
 
 export type LandingTranslations = typeof landingEn;
 export type UiTranslations = typeof uiEn;
@@ -26,6 +26,7 @@ const pagePaths: Record<PageKey, Record<Locale, string>> = {
   home: { en: '/', ja: '/ja/' },
   privacy: { en: '/privacy/', ja: '/ja/privacy/' },
   terms: { en: '/terms/', ja: '/ja/terms/' },
+  acknowledgements: { en: '/acknowledgements/', ja: '/ja/acknowledgements/' },
 };
 
 export function getLandingTranslations(locale: Locale): LandingTranslations {

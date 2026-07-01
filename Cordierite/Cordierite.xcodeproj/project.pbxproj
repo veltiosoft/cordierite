@@ -265,6 +265,7 @@
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "\U00a9 2026 Veltiosoft Inc.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Cordierite uses the microphone to transcribe your speech into text.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Cordierite uses speech recognition to convert your speech into text on your Mac.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",
@@ -301,6 +302,7 @@
 				INFOPLIST_KEY_LSUIElement = YES;
 				INFOPLIST_KEY_NSHumanReadableCopyright = "\U00a9 2026 Veltiosoft Inc.";
 				INFOPLIST_KEY_NSMicrophoneUsageDescription = "Cordierite uses the microphone to transcribe your speech into text.";
+				INFOPLIST_KEY_NSSpeechRecognitionUsageDescription = "Cordierite uses speech recognition to convert your speech into text on your Mac.";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/../Frameworks",

@@ -150,6 +150,10 @@ struct MenuBarView: View {
       Text("Open Settings…")
     }
 
+    Button("Acknowledgements…") {
+      openWindow(id: "acknowledgements")
+    }
+
     Divider()
 
     Button("Quit") {

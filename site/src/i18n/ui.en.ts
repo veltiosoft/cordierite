@@ -14,6 +14,7 @@ export const uiEn = {
     ariaLabel: 'Footer',
     privacy: 'Privacy',
     terms: 'Terms',
+    acknowledgements: 'Acknowledgements',
     contact: 'Contact',
     veltiosoft: 'Veltiosoft',
     copyright: '© 2026 Veltiosoft Inc.',

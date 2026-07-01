@@ -1,7 +1,7 @@
 import { getCollection, render } from 'astro:content';
 import type { Locale } from '../i18n';
 
-export type LegalDocument = 'privacy' | 'terms';
+export type LegalDocument = 'privacy' | 'terms' | 'acknowledgements';
 
 export async function getLegalPage(document: LegalDocument, locale: Locale) {
   const entries = await getCollection('legal', ({ data }) => {

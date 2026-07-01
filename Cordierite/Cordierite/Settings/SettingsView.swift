@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SettingsView: View {
   @Environment(AppModel.self) private var appModel
+  @Environment(\.openWindow) private var openWindow
 
   var body: some View {
     let configStore = appModel.configStore
@@ -115,6 +116,17 @@ struct SettingsView: View {
           Toggle("Restore Clipboard Text", isOn: configStore.binding(\.restoreClipboardText))
 
           Toggle("Remove Filler Words", isOn: configStore.binding(\.removeFillerWords))
+        }
+
+        Section("About") {
+          LabeledContent("Copyright") {
+            Text("© 2026 Veltiosoft Inc.")
+              .foregroundStyle(.secondary)
+          }
+
+          Button("Acknowledgements…") {
+            openWindow(id: "acknowledgements")
+          }
         }
       }
       .formStyle(.grouped)

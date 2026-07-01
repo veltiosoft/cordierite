@@ -14,6 +14,7 @@ export const uiJa = {
     ariaLabel: 'フッター',
     privacy: 'プライバシーポリシー',
     terms: '利用規約',
+    acknowledgements: '謝辞',
     contact: 'お問い合わせ',
     veltiosoft: 'Veltiosoft',
     copyright: '© 2026 Veltiosoft株式会社',
