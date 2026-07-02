@@ -17,7 +17,7 @@ enum UserDictionaryStoreError: LocalizedError, Equatable, Sendable {
 @MainActor
 @Observable
 final class UserDictionaryStore {
-  static let maxEntryCount = 20
+  nonisolated static let maxEntryCount = 20
 
   private(set) var entries: [UserDictionaryEntry] = []
 

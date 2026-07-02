@@ -2,6 +2,7 @@ import XCTest
 
 @testable import Cordierite
 
+@MainActor
 final class UserDictionaryReplacerTests: XCTestCase {
   func testApplyReplacesMatchingSource() {
     let entries = [

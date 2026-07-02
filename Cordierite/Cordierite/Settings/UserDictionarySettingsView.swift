@@ -50,8 +50,9 @@ struct UserDictionarySettingsView: View {
           }
         }
         .onDelete { offsets in
-          for index in offsets {
-            store.delete(id: store.entries[index].id)
+          let idsToDelete = offsets.map { store.entries[$0].id }
+          for id in idsToDelete {
+            store.delete(id: id)
           }
         }
       }
@@ -147,8 +148,12 @@ struct UserDictionarySettingsView: View {
 }
 
 #Preview {
+  let previewStore = UserDictionaryStore(
+    fileURL: FileManager.default.temporaryDirectory
+      .appendingPathComponent("cordierite-preview-user-dictionary.json")
+  )
   Form {
-    UserDictionarySettingsView(store: UserDictionaryStore())
+    UserDictionarySettingsView(store: previewStore)
   }
   .formStyle(.grouped)
   .padding()
