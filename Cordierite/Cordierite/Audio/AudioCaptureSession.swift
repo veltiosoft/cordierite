@@ -1,4 +1,5 @@
 import AVFoundation
+import AudioToolbox
 import CoreAudio
 import Foundation
 
@@ -74,48 +75,111 @@ private nonisolated final class FirstAudioBufferGate: @unchecked Sendable {
 
 @MainActor
 final class AudioCaptureSession {
-  // Recreated on every `start` via `refreshEngine` so the input node reports the
-  // current default input device's format. A reused AVAudioEngine can keep a
-  // stale output format after the default input device changes, which makes
-  // `installTap` throw an ObjC NSException (uncatchable in Swift) and crash.
+  /// How long to wait for the first non-empty tap buffer before treating capture
+  /// as failed to start.
+  private static let firstBufferTimeout: Duration = .seconds(1)
+
+  /// Delay before the single internal retry after a stale-format / engine-start
+  /// failure. Gives CoreAudio a moment to settle after a device change.
+  private static let retryDelay: Duration = .milliseconds(150)
+
+  /// After binding a device, the input node's format can take a brief moment to
+  /// reflect the new device (CoreAudio renegotiates asynchronously). Poll for it
+  /// to settle instead of immediately failing into the much more expensive
+  /// engine-recreate retry path — this is the common case, not an error case.
+  private static let formatSettleAttempts = 15
+  private static let formatSettlePollInterval: Duration = .milliseconds(20)
+
+  private static let tapBufferSize: AVAudioFrameCount = 1024
+
+  private let deviceDirectory: AudioDeviceDirectory
+
+  // Only recreated when the resolved device actually changes (see `attemptStart`).
+  // Recreating on every single start — even when repeating with the same device —
+  // was found to race with CoreAudio's own async teardown of the previous engine's
+  // HAL I/O thread (and, for devices CoreAudio wraps in an on-demand aggregate,
+  // that aggregate's teardown/rebuild). Starting a new engine before that settles
+  // fails with HAL errors like "there already is a thread" and a bogus fallback
+  // format, which surfaces to the user as "Microphone input did not become
+  // active." Recreating is still necessary when the device itself changes, to
+  // avoid the stale-output-format crash this was originally introduced to fix.
   private var engine = AVAudioEngine()
   private var isCapturing = false
+  private var boundResolution: ResolvedInputDevice?
 
   var inputFormat: AVAudioFormat {
     engine.inputNode.outputFormat(forBus: 0)
   }
 
+  init(deviceDirectory: AudioDeviceDirectory = CoreAudioDeviceDirectory()) {
+    self.deviceDirectory = deviceDirectory
+    registerDefaultDeviceChangeListener()
+  }
+
+  /// The system default input device can change without any device actually
+  /// connecting/disconnecting (e.g. the user picks a different mic in System
+  /// Settings, or CoreAudio silently swaps an on-demand aggregate device).
+  /// `resolveInputDevice` alone can't see that between calls, so listen for it
+  /// directly and drop the cached binding — the next `start()` will resolve and
+  /// bind fresh instead of assuming the old engine is still pointing the right way.
+  private func registerDefaultDeviceChangeListener() {
+    var address = AudioObjectPropertyAddress(
+      mSelector: kAudioHardwarePropertyDefaultInputDevice,
+      mScope: kAudioObjectPropertyScopeGlobal,
+      mElement: kAudioObjectPropertyElementMain
+    )
+
+    AudioObjectAddPropertyListenerBlock(
+      AudioObjectID(kAudioObjectSystemObject), &address, DispatchQueue.main
+    ) { [weak self] _, _ in
+      Task { @MainActor in
+        self?.invalidateBoundResolution()
+      }
+    }
+  }
+
+  private func invalidateBoundResolution() {
+    guard boundResolution != nil else {
+      return
+    }
+    AudioCaptureDiagnostics.logDefaultDeviceChanged()
+    boundResolution = nil
+  }
+
+  /// Starts capturing from `deviceUID` (or the system default input when `nil`).
+  ///
+  /// Device selection is scoped to this app's own `AVAudioEngine` instance via
+  /// `AUAudioUnit.setDeviceID` — this never touches the system-wide default input
+  /// device, so other apps' audio input is never affected.
   func start(deviceUID: String?, tapHandler: @escaping AVAudioNodeTapBlock) async throws {
     guard !isCapturing else {
       return
     }
 
-    NSLog("AudioCaptureSession: start requested deviceUID=\(deviceUID ?? "system-default")")
+    let clock = ContinuousClock()
+    let overallStart = clock.now
+    AudioCaptureDiagnostics.logStartRequested(deviceUID: deviceUID)
 
-    // Snapshot the HAL state up front so we can see what every layer reports.
-    logAllDevices()
+    do {
+      try await attemptStart(deviceUID: deviceUID, tapHandler: tapHandler, forceRebind: false)
+      AudioCaptureDiagnostics.logDuration("start (total)", clock.now - overallStart)
+    } catch {
+      // Full device dump is diagnostics-only and not cheap (several CoreAudio
+      // calls per device) — only pay for it once something has actually gone
+      // wrong, not on every normal start.
+      AudioCaptureDiagnostics.logAllDevices(directory: deviceDirectory)
 
-    let defaultBefore = try? currentDefaultInputDeviceID()
-    NSLog(
-      "AudioCaptureSession: default input device BEFORE set = \(defaultBefore.map(String.init) ?? "unknown")"
-    )
+      guard isRetryableAfterEngineRefresh(error) else {
+        throw error
+      }
 
-    // Resolve and verify a live input device BEFORE creating the engine. A
-    // disconnected Bluetooth headset can remain the system default input; if we
-    // let AVAudioEngine's input node bind to that dead device, installTap throws
-    // an ObjC NSException (uncatchable in Swift) and crashes the app.
-    let resolvedDeviceID = try resolveInputDevice(deviceUID: deviceUID)
-    logDeviceDescription(id: resolvedDeviceID, label: "resolved")
-    try setDefaultInputDevice(id: resolvedDeviceID)
-
-    let defaultAfter = try? currentDefaultInputDeviceID()
-    NSLog(
-      "AudioCaptureSession: default input device AFTER set = \(defaultAfter.map(String.init) ?? "unknown")"
-    )
-
-    refreshEngine()
-    try await startCapture(
-      deviceUID: deviceUID, resolvedDeviceID: resolvedDeviceID, tapHandler: tapHandler)
+      // Something already went wrong with the current engine/binding — always
+      // rebuild from scratch on the retry rather than trusting the cached bind.
+      AudioCaptureDiagnostics.logRetrying(after: error)
+      try await Task.sleep(for: Self.retryDelay)
+      try await attemptStart(deviceUID: deviceUID, tapHandler: tapHandler, forceRebind: true)
+      AudioCaptureDiagnostics.logDuration("start (total, after retry)", clock.now - overallStart)
+    }
   }
 
   func stop() {
@@ -128,6 +192,46 @@ final class AudioCaptureSession {
     isCapturing = false
   }
 
+  /// A stale-format or transient engine-start failure can usually be resolved by
+  /// recreating the engine and trying once more. A missing device is a real,
+  /// non-transient condition and is not worth retrying.
+  private func isRetryableAfterEngineRefresh(_ error: Error) -> Bool {
+    switch error as? AudioCaptureError {
+    case .noInputReceived, .engineStartFailed:
+      return true
+    default:
+      return false
+    }
+  }
+
+  private func attemptStart(
+    deviceUID: String?, tapHandler: @escaping AVAudioNodeTapBlock, forceRebind: Bool
+  ) async throws {
+    let clock = ContinuousClock()
+    let attemptStart = clock.now
+
+    let resolution = try resolveInputDevice(deviceUID: deviceUID)
+    AudioCaptureDiagnostics.logResolution(resolution, directory: deviceDirectory)
+    let resolvedAt = clock.now
+    AudioCaptureDiagnostics.logDuration("resolve", resolvedAt - attemptStart)
+
+    if forceRebind || resolution != boundResolution {
+      refreshEngine()
+      try bindInputDevice(resolution)
+      AudioCaptureDiagnostics.logDuration("bind (rebuilt)", clock.now - resolvedAt)
+    } else {
+      AudioCaptureDiagnostics.logReusingEngine()
+    }
+
+    do {
+      try await startCapture(deviceUID: deviceUID, tapHandler: tapHandler)
+      boundResolution = resolution
+    } catch {
+      invalidateBoundResolution()
+      throw error
+    }
+  }
+
   private func refreshEngine() {
     if isCapturing {
       engine.inputNode.removeTap(onBus: 0)
@@ -136,47 +240,42 @@ final class AudioCaptureSession {
     engine = AVAudioEngine()
   }
 
-  private func startCapture(
-    deviceUID: String?,
-    resolvedDeviceID: AudioDeviceID,
-    tapHandler: @escaping AVAudioNodeTapBlock
-  ) async throws {
-    let inputNode = engine.inputNode
-    let nodeOutputFormat = inputNode.outputFormat(forBus: 0)
-    let nodeInputFormat = inputNode.inputFormat(forBus: 0)
-    let hwStream = inputStreamDescription(for: resolvedDeviceID)
-    let nominal = nominalSampleRate(for: resolvedDeviceID)
-
-    NSLog(
-      """
-      AudioCaptureSession: format probe — \
-      inputNode.output \(nodeOutputFormat.sampleRate) Hz / \(nodeOutputFormat.channelCount) ch, \
-      inputNode.input \(nodeInputFormat.sampleRate) Hz / \(nodeInputFormat.channelCount) ch, \
-      CoreAudio input stream \(hwStream.map { "\($0.sampleRate) Hz / \($0.channels) ch" } ?? "n/a"), \
-      CoreAudio nominal \(nominal.map { "\($0) Hz" } ?? "n/a")
-      """)
-
-    let format = nodeOutputFormat
-    logInputDiagnostics(
-      deviceUID: deviceUID, resolvedDeviceID: resolvedDeviceID, format: format)
-
-    guard isTapFormatValid(format) else {
-      throw AudioCaptureError.engineStartFailed
+  /// Binds `engine`'s input node to a specific device, or leaves it untouched so
+  /// it keeps following the system default (`.systemDefault`). Must run before the
+  /// input node's format is read or a tap is installed.
+  private func bindInputDevice(_ resolution: ResolvedInputDevice) throws {
+    let deviceID: AudioDeviceID
+    switch resolution {
+    case .systemDefault:
+      return
+    case .specific(let id), .fallback(let id):
+      deviceID = id
     }
 
-    // Cross-check: if AVAudioEngine's reported output format disagrees with the
-    // device's actual hardware stream format, installing a tap on the output bus
-    // can throw an ObjC NSException. Log the discrepancy so we can pinpoint it
-    // even when validation passes.
-    if let hwStream, hwStream.sampleRate > 0,
-      abs(hwStream.sampleRate - format.sampleRate) > 1.0
-    {
-      NSLog(
-        """
-        AudioCaptureSession: WARN outputFormat \(format.sampleRate) Hz \
-        differs from hardware stream \(hwStream.sampleRate) Hz for device \(resolvedDeviceID)
-        """
-      )
+    do {
+      try engine.inputNode.auAudioUnit.setDeviceID(AUAudioObjectID(deviceID))
+    } catch {
+      AudioCaptureDiagnostics.logBindFailure(id: deviceID, error: error)
+      throw AudioCaptureError.deviceNotFound
+    }
+  }
+
+  private func startCapture(
+    deviceUID: String?,
+    tapHandler: @escaping AVAudioNodeTapBlock
+  ) async throws {
+    let clock = ContinuousClock()
+    let phaseStart = clock.now
+    let inputNode = engine.inputNode
+
+    let (format, hardwareInputFormat) = try await settledFormat(for: inputNode)
+    AudioCaptureDiagnostics.logDuration("formatSettle", clock.now - phaseStart)
+    AudioCaptureDiagnostics.logFormatProbe(
+      deviceUID: deviceUID, format: format, hardwareInputFormat: hardwareInputFormat)
+
+    guard isTapFormatValid(format, hardwareInputFormat: hardwareInputFormat) else {
+      AudioCaptureDiagnostics.logInvalidFormat(format, hardwareInputFormat: hardwareInputFormat)
+      throw AudioCaptureError.engineStartFailed
     }
 
     let firstBufferGate = FirstAudioBufferGate()
@@ -185,64 +284,70 @@ final class AudioCaptureSession {
       tapHandler: tapHandler
     )
     inputNode.removeTap(onBus: 0)
-    NSLog(
-      "AudioCaptureSession: installTap bus=0 bufferSize=1024 format=\(format.sampleRate) Hz/\(format.channelCount) ch"
-    )
-    inputNode.installTap(onBus: 0, bufferSize: 1024, format: format, block: gatedTapHandler)
+    inputNode.installTap(
+      onBus: 0, bufferSize: Self.tapBufferSize, format: format, block: gatedTapHandler)
 
     engine.prepare()
+    let engineStartBegin = clock.now
     do {
       try engine.start()
     } catch {
       inputNode.removeTap(onBus: 0)
-      NSLog("AVAudioEngine.start failed: \(error)")
+      AudioCaptureDiagnostics.logEngineStartFailed(error)
       throw AudioCaptureError.engineStartFailed
     }
+    AudioCaptureDiagnostics.logDuration("engineStart", clock.now - engineStartBegin)
 
     isCapturing = true
 
+    let firstBufferBegin = clock.now
     do {
       try await waitForFirstInputBuffer(firstBufferGate)
     } catch {
       stop()
       throw error
     }
+    AudioCaptureDiagnostics.logDuration("firstBuffer", clock.now - firstBufferBegin)
   }
 
-  private func isTapFormatValid(_ format: AVAudioFormat) -> Bool {
+  /// Polls the input node's format for up to `formatSettleAttempts` short
+  /// intervals until input/output sample rates agree, instead of immediately
+  /// treating a momentary mismatch (common right after binding a new device) as
+  /// a hard failure that would trigger a full, much slower engine-recreate retry.
+  private func settledFormat(for inputNode: AVAudioInputNode) async throws -> (
+    AVAudioFormat, AVAudioFormat
+  ) {
+    var format = inputNode.outputFormat(forBus: 0)
+    var hardwareInputFormat = inputNode.inputFormat(forBus: 0)
+
+    var attempt = 0
+    while !isTapFormatValid(format, hardwareInputFormat: hardwareInputFormat),
+      attempt < Self.formatSettleAttempts
+    {
+      try await Task.sleep(for: Self.formatSettlePollInterval)
+      format = inputNode.outputFormat(forBus: 0)
+      hardwareInputFormat = inputNode.inputFormat(forBus: 0)
+      attempt += 1
+    }
+
+    return (format, hardwareInputFormat)
+  }
+
+  /// The input node's input and output formats should agree on sample rate for a
+  /// tap on the output bus. A mismatch signals a stale format cache and would make
+  /// `installTap` throw an uncatchable ObjC exception.
+  private func isTapFormatValid(_ format: AVAudioFormat, hardwareInputFormat: AVAudioFormat)
+    -> Bool
+  {
     guard format.sampleRate > 0, format.channelCount > 0 else {
-      NSLog(
-        "AudioCaptureSession: invalid tap format — \(format.sampleRate) Hz, \(format.channelCount) ch"
-      )
       return false
     }
 
-    // The input node's input and output formats should agree on sample rate for
-    // a tap on the output bus. A mismatch signals a stale format cache.
-    let hardwareFormat = engine.inputNode.inputFormat(forBus: 0)
-    if hardwareFormat.sampleRate > 0, hardwareFormat.sampleRate != format.sampleRate {
-      NSLog(
-        """
-        AudioCaptureSession: input/output format mismatch — \
-        input \(hardwareFormat.sampleRate) Hz, output \(format.sampleRate) Hz
-        """
-      )
+    if hardwareInputFormat.sampleRate > 0, hardwareInputFormat.sampleRate != format.sampleRate {
       return false
     }
 
     return true
-  }
-
-  private func logInputDiagnostics(
-    deviceUID: String?, resolvedDeviceID: AudioDeviceID, format: AVAudioFormat
-  ) {
-    NSLog(
-      """
-      AudioCaptureSession: requested=\(deviceUID ?? "system-default"), \
-      resolvedDeviceID=\(resolvedDeviceID), \
-      tap format \(format.sampleRate) Hz, \(format.channelCount) ch
-      """
-    )
   }
 
   /// Resolves a concrete, currently-present input device for the requested UID.
@@ -250,222 +355,28 @@ final class AudioCaptureSession {
   ///   (throws `deviceNotFound` otherwise — surfaces as reload guidance, no crash).
   /// - When `deviceUID` is nil (System Default), verifies the system default is
   ///   still a live device. If macOS left the default pointing at a just
-  ///   disconnected device (e.g. Bluetooth headset), falls back to any present
-  ///   input device so recording can proceed without crashing.
-  private func resolveInputDevice(deviceUID requestedUID: String?) throws -> AudioDeviceID {
-    let deviceIDs = try currentDeviceIDs()
-
-    if let requestedUID {
-      guard let id = deviceIDs.first(where: { deviceUID(for: $0) == requestedUID }) else {
-        NSLog("AudioCaptureSession: requested device \(requestedUID) not present")
-        throw AudioCaptureError.deviceNotFound
-      }
-      return id
-    }
-
-    let defaultID = try currentDefaultInputDeviceID()
-    if deviceIDs.contains(defaultID) {
-      return defaultID
-    }
-
-    // System default is stale (points at a disconnected device). Fall back to a
-    // known input device reported by AVFoundation rather than letting the engine
-    // bind to the dead default.
-    NSLog(
-      "AudioCaptureSession: system default \(defaultID) is no longer present, falling back"
-    )
-    let fallbackUID = MicrophoneEnumerator.availableDevices().first?.id
-    if let fallbackUID,
-      let fallbackID = deviceIDs.first(where: { deviceUID(for: $0) == fallbackUID })
-    {
-      return fallbackID
-    }
-
-    throw AudioCaptureError.deviceNotFound
-  }
-
-  private func currentDeviceIDs() throws -> [AudioDeviceID] {
-    var address = AudioObjectPropertyAddress(
-      mSelector: kAudioHardwarePropertyDevices,
-      mScope: kAudioObjectPropertyScopeGlobal,
-      mElement: kAudioObjectPropertyElementMain
-    )
-
-    var size: UInt32 = 0
-    var status = AudioObjectGetPropertyDataSize(
-      AudioObjectID(kAudioObjectSystemObject),
-      &address,
-      0,
-      nil,
-      &size
-    )
-    guard status == noErr else {
+  ///   disconnected device, resolves a fallback device instead — see
+  ///   `InputDeviceResolver`.
+  private func resolveInputDevice(deviceUID: String?) throws -> ResolvedInputDevice {
+    guard let liveDeviceIDs = try? deviceDirectory.liveDeviceIDs() else {
       throw AudioCaptureError.deviceNotFound
     }
 
-    let count = Int(size) / MemoryLayout<AudioDeviceID>.size
-    var ids = [AudioDeviceID](repeating: 0, count: count)
-    status = AudioObjectGetPropertyData(
-      AudioObjectID(kAudioObjectSystemObject),
-      &address,
-      0,
-      nil,
-      &size,
-      &ids
-    )
-    guard status == noErr else {
-      throw AudioCaptureError.deviceNotFound
-    }
-    return ids
-  }
-
-  private func currentDefaultInputDeviceID() throws -> AudioDeviceID {
-    var address = AudioObjectPropertyAddress(
-      mSelector: kAudioHardwarePropertyDefaultInputDevice,
-      mScope: kAudioObjectPropertyScopeGlobal,
-      mElement: kAudioObjectPropertyElementMain
-    )
-
-    var id = AudioDeviceID(0)
-    var size = UInt32(MemoryLayout<AudioDeviceID>.size)
-    let status = AudioObjectGetPropertyData(
-      AudioObjectID(kAudioObjectSystemObject),
-      &address,
-      0,
-      nil,
-      &size,
-      &id
-    )
-    guard status == noErr else {
-      throw AudioCaptureError.deviceNotFound
-    }
-    return id
-  }
-
-  private func setDefaultInputDevice(id: AudioDeviceID) throws {
-    var address = AudioObjectPropertyAddress(
-      mSelector: kAudioHardwarePropertyDefaultInputDevice,
-      mScope: kAudioObjectPropertyScopeGlobal,
-      mElement: kAudioObjectPropertyElementMain
-    )
-
-    var mutableID = id
-    let size = UInt32(MemoryLayout<AudioDeviceID>.size)
-    let status = AudioObjectSetPropertyData(
-      AudioObjectID(kAudioObjectSystemObject),
-      &address,
-      0,
-      nil,
-      size,
-      &mutableID
-    )
-    guard status == noErr else {
-      NSLog("AudioCaptureSession: setDefaultInputDevice id=\(id) failed status=\(status)")
-      throw AudioCaptureError.deviceNotFound
-    }
-    NSLog("AudioCaptureSession: setDefaultInputDevice id=\(id) ok")
-  }
-
-  private func deviceUID(for deviceID: AudioDeviceID) -> String? {
-    var propertyAddress = AudioObjectPropertyAddress(
-      mSelector: kAudioDevicePropertyDeviceUID,
-      mScope: kAudioObjectPropertyScopeGlobal,
-      mElement: kAudioObjectPropertyElementMain
-    )
-
-    var uid: Unmanaged<CFString>?
-    var dataSize = UInt32(MemoryLayout<Unmanaged<CFString>?>.size)
-    let status = AudioObjectGetPropertyData(
-      deviceID,
-      &propertyAddress,
-      0,
-      nil,
-      &dataSize,
-      &uid
-    )
-
-    guard status == noErr, let uid else {
-      return nil
-    }
-
-    return uid.takeRetainedValue() as String
-  }
-
-  /// Device name for diagnostics (falls back to the UID or ID).
-  private func deviceName(for deviceID: AudioDeviceID) -> String {
-    var address = AudioObjectPropertyAddress(
-      mSelector: kAudioObjectPropertyName,
-      mScope: kAudioObjectPropertyScopeGlobal,
-      mElement: kAudioObjectPropertyElementMain
-    )
-    var name: CFString?
-    var size = UInt32(MemoryLayout<CFString?>.size)
-    let status = AudioObjectGetPropertyData(deviceID, &address, 0, nil, &size, &name)
-    if status == noErr, let name {
-      return name as String
-    }
-    return deviceUID(for: deviceID) ?? "\(deviceID)"
-  }
-
-  /// Nominal sample rate of the device (global), if readable.
-  private func nominalSampleRate(for deviceID: AudioDeviceID) -> Double? {
-    var address = AudioObjectPropertyAddress(
-      mSelector: kAudioDevicePropertyNominalSampleRate,
-      mScope: kAudioObjectPropertyScopeGlobal,
-      mElement: kAudioObjectPropertyElementMain
-    )
-    var rate = Float64(0)
-    var size = UInt32(MemoryLayout<Float64>.size)
-    let status = AudioObjectGetPropertyData(deviceID, &address, 0, nil, &size, &rate)
-    guard status == noErr else { return nil }
-    return rate
-  }
-
-  /// Actual input stream format (sample rate + channels) of element 0 on the
-  /// input scope. This is what the hardware will really deliver — useful to
-  /// compare against AVAudioEngine's reported `outputFormat(forBus: 0)`.
-  private func inputStreamDescription(for deviceID: AudioDeviceID) -> (
-    sampleRate: Double, channels: UInt32
-  )? {
-    var address = AudioObjectPropertyAddress(
-      mSelector: kAudioDevicePropertyStreamFormat,
-      mScope: kAudioObjectPropertyScopeInput,
-      mElement: kAudioObjectPropertyElementMain
-    )
-    var asbd = AudioStreamBasicDescription()
-    var size = UInt32(MemoryLayout<AudioStreamBasicDescription>.size)
-    let status = AudioObjectGetPropertyData(deviceID, &address, 0, nil, &size, &asbd)
-    guard status == noErr else { return nil }
-    return (asbd.mSampleRate, asbd.mChannelsPerFrame)
-  }
-
-  private func logDeviceDescription(id: AudioDeviceID, label: String) {
-    let uid = deviceUID(for: id) ?? "n/a"
-    let name = deviceName(for: id)
-    let nominal = nominalSampleRate(for: id).map { "\($0) Hz" } ?? "n/a"
-    let stream =
-      inputStreamDescription(for: id).map { "\($0.sampleRate) Hz / \($0.channels) ch" } ?? "n/a"
-    NSLog(
-      """
-      AudioCaptureSession: \(label) device id=\(id) name=\"\(name)\" \
-      uid=\(uid) nominal=\(nominal) inputStream=\(stream)
-      """
-    )
-  }
-
-  private func logAllDevices() {
-    guard let ids = try? currentDeviceIDs() else {
-      NSLog("AudioCaptureSession: failed to enumerate devices")
-      return
-    }
-    NSLog("AudioCaptureSession: present devices count=\(ids.count)")
-    for id in ids {
-      logDeviceDescription(id: id, label: "  device")
+    switch InputDeviceResolver.resolve(
+      requestedUID: deviceUID,
+      liveDeviceIDs: liveDeviceIDs,
+      defaultDeviceID: try? deviceDirectory.defaultInputDeviceID(),
+      uidLookup: deviceDirectory.uid(for:)
+    ) {
+    case .success(let resolution):
+      return resolution
+    case .failure(let error):
+      throw error
     }
   }
 
   private func waitForFirstInputBuffer(_ gate: FirstAudioBufferGate) async throws {
-    try await gate.wait(timeout: .seconds(1))
+    try await gate.wait(timeout: Self.firstBufferTimeout)
   }
 
   private nonisolated static func makeGatedTapHandler(

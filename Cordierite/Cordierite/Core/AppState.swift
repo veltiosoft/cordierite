@@ -47,6 +47,12 @@ struct RecordingFeedback: Equatable, Identifiable, Sendable {
     action: nil
   )
 
+  static let microphoneResetToSystemDefault = RecordingFeedback(
+    title: "Selected microphone is unavailable",
+    message: "Switched to System Default. Choose a microphone again if needed.",
+    action: nil
+  )
+
   static func startFailed(_ error: Error) -> RecordingFeedback {
     if let captureError = error as? AudioCaptureError {
       switch captureError {

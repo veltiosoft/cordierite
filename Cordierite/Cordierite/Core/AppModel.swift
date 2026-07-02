@@ -138,6 +138,8 @@ final class AppModel {
   let permissionChecker = PermissionChecker()
   private var speechEngine: any SpeechRecognitionEngine
   private let hotkeyMonitor = HotkeyMonitor()
+  private let microphoneAvailabilityMonitor = MicrophoneAvailabilityMonitor()
+  private let microphoneSelectionGuard: MicrophoneSelectionGuard
   private let recordingController: RecordingController
   private let pasteController = PasteController()
   private var stopRecordingAfterStart = false
@@ -149,6 +151,7 @@ final class AppModel {
       whisperConfiguration: configStore.configuration.whisper
     )
     speechEngine = engine
+    microphoneSelectionGuard = MicrophoneSelectionGuard(configStore: configStore)
     recordingController = RecordingController(speechEngine: engine)
 
     recordingController.onMaxDurationReached = { [weak self] in
@@ -172,6 +175,8 @@ final class AppModel {
         await self?.refreshWhisperModelStatus()
       }
     }
+
+    microphoneAvailabilityMonitor.start { [weak self] in self?.refreshMicrophoneList() }
 
     Task {
       await bootstrap()
@@ -377,6 +382,9 @@ final class AppModel {
 
   func refreshMicrophoneList() {
     availableMicrophones = MicrophoneEnumerator.availableDevices()
+    if microphoneSelectionGuard.reconcile(availableMicrophones: availableMicrophones) {
+      recordingFeedback = .microphoneResetToSystemDefault
+    }
   }
 
   func reloadHotkeyMonitor() {
@@ -532,10 +540,22 @@ final class AppModel {
     } catch {
       stopRecordingAfterStart = false
       await recoverOrphanedRecordingIfNeeded()
-      recordingFeedback = .startFailed(error)
+      handleRecordingStartFailure(error)
       restoreIdleState()
       NSLog("Failed to start recording: \(error.localizedDescription)")
     }
+  }
+
+  private func handleRecordingStartFailure(_ error: Error) {
+    if case AudioCaptureError.deviceNotFound = error,
+      configStore.configuration.microphoneDeviceID != nil
+    {
+      microphoneSelectionGuard.reset()
+      refreshMicrophoneList()
+      recordingFeedback = .microphoneResetToSystemDefault
+      return
+    }
+    recordingFeedback = .startFailed(error)
   }
 
   private func restoreIdleState() {
@@ -668,6 +688,7 @@ final class AppModel {
 
   func quit() {
     hotkeyMonitor.stop()
+    microphoneAvailabilityMonitor.stop()
     Task {
       if recordingController.isRecording {
         _ = await recordingController.stop()

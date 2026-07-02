@@ -111,6 +111,10 @@ final class RecordingController {
     }
   }
 
+  /// `AudioCaptureSession.start` already retries once internally after a stale-
+  /// format / engine-start failure, so this only needs to handle one external
+  /// cause: microphone permission that was granted moments ago and hasn't
+  /// propagated to CoreAudio yet.
   private func startAudioCapture(
     deviceUID: String?,
     audioStream: (
@@ -129,27 +133,12 @@ final class RecordingController {
     do {
       try await audioCapture.start(deviceUID: deviceUID, tapHandler: tapHandler)
     } catch {
-      guard shouldRetryAudioCapture(after: error, requestedRetry: retry) else {
+      guard retry else {
         throw error
       }
 
       try await Task.sleep(for: .milliseconds(150))
       try await audioCapture.start(deviceUID: deviceUID, tapHandler: tapHandler)
-    }
-  }
-
-  private func shouldRetryAudioCapture(after error: Error, requestedRetry: Bool) -> Bool {
-    if requestedRetry {
-      return true
-    }
-
-    switch error as? AudioCaptureError {
-    case .noInputReceived, .engineStartFailed:
-      // `AudioCaptureSession.start` regenerates the AVAudioEngine on every call,
-      // so one retry gives a fresh format read after a stale-format / start failure.
-      return true
-    default:
-      return false
     }
   }
 
