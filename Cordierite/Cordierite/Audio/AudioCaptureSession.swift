@@ -218,13 +218,18 @@ final class AudioCaptureSession {
     if forceRebind || resolution != boundResolution {
       refreshEngine()
       try bindInputDevice(resolution)
-      boundResolution = resolution
       AudioCaptureDiagnostics.logDuration("bind (rebuilt)", clock.now - resolvedAt)
     } else {
       AudioCaptureDiagnostics.logReusingEngine()
     }
 
-    try await startCapture(deviceUID: deviceUID, tapHandler: tapHandler)
+    do {
+      try await startCapture(deviceUID: deviceUID, tapHandler: tapHandler)
+      boundResolution = resolution
+    } catch {
+      invalidateBoundResolution()
+      throw error
+    }
   }
 
   private func refreshEngine() {
@@ -353,16 +358,14 @@ final class AudioCaptureSession {
   ///   disconnected device, resolves a fallback device instead — see
   ///   `InputDeviceResolver`.
   private func resolveInputDevice(deviceUID: String?) throws -> ResolvedInputDevice {
-    guard let liveDeviceIDs = try? deviceDirectory.liveDeviceIDs(),
-      let defaultDeviceID = try? deviceDirectory.defaultInputDeviceID()
-    else {
+    guard let liveDeviceIDs = try? deviceDirectory.liveDeviceIDs() else {
       throw AudioCaptureError.deviceNotFound
     }
 
     switch InputDeviceResolver.resolve(
       requestedUID: deviceUID,
       liveDeviceIDs: liveDeviceIDs,
-      defaultDeviceID: defaultDeviceID,
+      defaultDeviceID: try? deviceDirectory.defaultInputDeviceID(),
       uidLookup: deviceDirectory.uid(for:)
     ) {
     case .success(let resolution):

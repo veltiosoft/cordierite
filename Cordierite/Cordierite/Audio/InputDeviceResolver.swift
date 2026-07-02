@@ -23,11 +23,13 @@ enum InputDeviceResolver {
   ///     cross-matched against `MicrophoneEnumerator`'s AVFoundation-based list, to
   ///     avoid depending on two device-listing APIs staying in sync.
   ///   - defaultDeviceID: The system's current default input device (may be stale).
+  ///     Optional because the query can fail even when a specific requested device
+  ///     is still present in `liveDeviceIDs`.
   ///   - uidLookup: Resolves a UID for a given device ID (from `AudioDeviceDirectory`).
   static func resolve(
     requestedUID: String?,
     liveDeviceIDs: [AudioDeviceID],
-    defaultDeviceID: AudioDeviceID,
+    defaultDeviceID: AudioDeviceID?,
     uidLookup: (AudioDeviceID) -> String?
   ) -> Result<ResolvedInputDevice, AudioCaptureError> {
     if let requestedUID {
@@ -39,20 +41,20 @@ enum InputDeviceResolver {
       // to explicitly bind the engine to it — an explicit `setDeviceID` forces
       // CoreAudio to re-negotiate the device even when nothing would actually
       // change, which is a needless source of startup latency.
-      if match == defaultDeviceID {
+      if let defaultDeviceID, match == defaultDeviceID {
         return .success(.systemDefault)
       }
       return .success(.specific(match))
     }
 
-    if liveDeviceIDs.contains(defaultDeviceID) {
+    if let defaultDeviceID, liveDeviceIDs.contains(defaultDeviceID) {
       return .success(.systemDefault)
     }
 
     // The system default points at a device that's no longer present (e.g. a
     // just-disconnected Bluetooth headset). Bind this app's engine directly to a
-    // live device instead — this only affects Cordierite's own capture, unlike the
-    // old approach of rewriting the system-wide default input device.
+    // live input device instead — this only affects Cordierite's own capture,
+    // unlike the old approach of rewriting the system-wide default input device.
     guard let fallback = liveDeviceIDs.first else {
       return .failure(.deviceNotFound)
     }

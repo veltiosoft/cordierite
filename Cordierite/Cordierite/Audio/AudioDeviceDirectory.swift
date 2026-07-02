@@ -53,7 +53,11 @@ struct CoreAudioDeviceDirectory: AudioDeviceDirectory {
     guard status == noErr else {
       throw AudioDeviceDirectoryError.queryFailed(status)
     }
-    return ids
+    return ids.filter { hasInputStreams(deviceID: $0) }
+  }
+
+  private func hasInputStreams(deviceID: AudioDeviceID) -> Bool {
+    inputStreamDescription(for: deviceID) != nil
   }
 
   func defaultInputDeviceID() throws -> AudioDeviceID {
