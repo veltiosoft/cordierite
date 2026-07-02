@@ -105,6 +105,8 @@ struct SettingsView: View {
           }
         }
 
+        UserDictionarySettingsView(store: appModel.userDictionaryStore)
+
         Section("General") {
           Stepper(
             "Max Recording: \(configStore.configuration.maxRecordingSeconds)s",

@@ -135,6 +135,7 @@ final class AppModel {
   }
 
   let configStore = ConfigStore()
+  let userDictionaryStore = UserDictionaryStore()
   let permissionChecker = PermissionChecker()
   private var speechEngine: any SpeechRecognitionEngine
   private let hotkeyMonitor = HotkeyMonitor()
@@ -593,8 +594,12 @@ final class AppModel {
         transcript,
         removeFillerWords: configStore.configuration.removeFillerWords
       )
+      let finalTranscript = UserDictionaryReplacer.apply(
+        processedTranscript,
+        entries: userDictionaryStore.enabledEntries
+      )
 
-      guard !processedTranscript.isEmpty else {
+      guard !finalTranscript.isEmpty else {
         liveTranscript = ""
         recordingFeedback = .textRemovedByCleanup
         NSLog("Recording discarded after post-processing: \(duration)s, peak RMS \(peakRMS)")
@@ -603,13 +608,13 @@ final class AppModel {
         return
       }
 
-      lastTranscript = processedTranscript
-      liveTranscript = processedTranscript
-      NSLog("Transcript (\(duration)s, peak RMS \(peakRMS)): \(processedTranscript)")
+      lastTranscript = finalTranscript
+      liveTranscript = finalTranscript
+      NSLog("Transcript (\(duration)s, peak RMS \(peakRMS)): \(finalTranscript)")
 
       do {
         try await pasteController.paste(
-          text: processedTranscript,
+          text: finalTranscript,
           method: configStore.configuration.pasteMethod,
           restoreClipboard: configStore.configuration.restoreClipboardText
         )
